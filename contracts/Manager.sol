@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ByteHasher } from './helpers/ByteHasher.sol';
 import { IWorldID } from './interfaces/IWorldID.sol';
 
@@ -10,10 +11,14 @@ contract Manager {
 	int8 internal constant DEFAULT_CREDIT_SCORE = 50;
 
 	struct Loan {
-		uint256 loanAmount; // In USDC, will be increasing with interested rate
+		uint256 debtAmount; // In USDC, will be increasing with interested rate
 		uint256 collateralAmount; // Stays unchanged, will be used for liquidation
 		address escrowWallet;
+		int8 interestRate;
 	}
+
+	address public usdcTokenAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Mainnet USDC address
+    IERC20 usdcToken = IERC20(usdcTokenAddress);
 
 	///////////////////////////////////////////////////////////////////////////////
 	///                                  ERRORS                                ///
@@ -37,6 +42,9 @@ contract Manager {
 	/// @dev Credit scores are stored here /100
 	mapping(address => int8) internal s_creditScore;
 
+	/// @dev List of current loans
+	mapping(address => Loan) internal s_loans;
+
 	/// @param nullifierHash The nullifier hash for the verified proof
 	/// @dev A placeholder event that is emitted when a user successfully verifies with World ID
 	event Verified(uint256 nullifierHash);
@@ -45,6 +53,8 @@ contract Manager {
 	/// @param old_address The old address that the user wants to change
 	/// @param new_address The new address that the user wants to change to
 	event UpdateVerified(uint256 nullifierHash, address old_address, address new_address);
+
+	event RepayLoan(address, uint256);
 
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
@@ -126,7 +136,34 @@ contract Manager {
 		(uint256 collateralAmount, uint256 interestRate, int8 creditScore) = estimateLoan(loanAmount);
 		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
+		address escrowWallet = address(0); // Actual address here
+		s_loans[msg.sender] = (loanAmount, collateralAmount, escrowWallet, interestRate);
 	}
 
 
+	/// @dev This function is used to improve the health ratio of user's loan
+	function repayWithoutCollateralWithdrawal(uint256 repayAmount) external {
+		if(repayAmount = 0) revert ("Amount must be greater than zero");
+
+        // Transfer USDC from the user to the contract
+        bool success = usdcToken.transferFrom(msg.sender, address(this), repayAmount);
+        require(success, "USDC transfer failed");
+
+        // Decrease the owed amount to the protocol
+        s_loans[msg.sender].debtAmount -= repayAmount;
+
+        emit RepayLoan(msg.sender, repayAmount);
+	}
+
+	function checkLiquidate(address debtor) external {
+		// check that loan exists
+	}
+
+	function liquidateLoan() external {
+		// 1Inch liquidation event here
+	}
+
+	function topUpInterestRate() external {
+		// Do a check that enough time has passed
+	}
 }

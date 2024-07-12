@@ -7,6 +7,14 @@ import { IWorldID } from './interfaces/IWorldID.sol';
 contract Manager {
 	using ByteHasher for bytes;
 
+	int8 internal constant DEFAULT_CREDIT_SCORE = 50;
+
+	struct Loan {
+		uint256 loanAmount; // In USDC, will be increasing with interested rate
+		uint256 collateralAmount; // Stays unchanged, will be used for liquidation
+		address escrowWallet;
+	}
+
 	///////////////////////////////////////////////////////////////////////////////
 	///                                  ERRORS                                ///
 	//////////////////////////////////////////////////////////////////////////////
@@ -24,7 +32,10 @@ contract Manager {
 	uint256 internal immutable groupId = 1;
 
 	/// @dev Normal wallet to WorldID (here are the wallets that have been verified with the World ID)
-	mapping(address => uint256) internal verifiedWallet;
+	mapping(address => uint256) internal s_verifiedWallet;
+
+	/// @dev Credit scores are stored here /100
+	mapping(address => int8) internal s_creditScore;
 
 	/// @param nullifierHash The nullifier hash for the verified proof
 	/// @dev A placeholder event that is emitted when a user successfully verifies with World ID
@@ -49,7 +60,7 @@ contract Manager {
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
 	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
 	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
-		if(verifiedWallet[msg.sender] != 0) revert("Wallet address already verified with WorldID");
+		if(s_verifiedWallet[msg.sender] != 0) revert("Wallet address already verified with WorldID");
 		// We now verify the provided proof is valid and the user is verified by World ID
 		worldId.verifyProof(
 			root,
@@ -60,7 +71,8 @@ contract Manager {
 			proof
 		);
 
-		verifiedWallet[msg.sender] = nullifierHash;
+		s_verifiedWallet[msg.sender] = nullifierHash;
+		s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
 
 		emit Verified(nullifierHash);
 	}
@@ -68,7 +80,7 @@ contract Manager {
 
 	/// @param signal Old address of the wallet that user wants to change.
 	function changeVerifiedWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
-		if(verifiedWallet[signal] == 0) revert("Wallet address doesn't exist.");
+		if(s_verifiedWallet[signal] == 0) revert("Wallet address doesn't exist.");
 		// We now verify the provided proof is valid and the user is verified by World ID
 		worldId.verifyProof(
 			root,
@@ -79,10 +91,42 @@ contract Manager {
 			proof
 		);
 
-		if(verifiedWallet[signal] != nullifierHash) revert("WorldID is different.");
-		verifiedWallet[msg.sender] = nullifierHash; //Updating
-		verifiedWallet[signal] = 0;
+		if(s_verifiedWallet[signal] != nullifierHash) revert("WorldID is different.");
+		s_verifiedWallet[msg.sender] = nullifierHash; //Updating
+		s_verifiedWallet[signal] = 0;
 
 		emit UpdateVerified(nullifierHash, signal, msg.sender);
 	}
+
+	/// @dev Estimate the loan before taking it
+	/// @param loanAmount How much loan the user wants to take out (in USDC)
+	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, uint256 interestRate, int8 creditScore) {
+		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
+		creditScore = s_creditScore[msg.sender];
+
+		if(creditScore >= 90) { // The best terms for a loan
+			collateralAmount = 0.02 ether; /// Get price of ETH to USDC, get 10% of the @param loanAmount 
+			interestRate = 10; // %
+		} else if(creditScore < 90 && creditScore >= 60) {
+			collateralAmount = 0.03 ether; /// Get price of ETH to USDC, get 30% of the @param loanAmount 
+			interestRate = 20; // %
+		} else if(creditScore < 60 && creditScore >= 30) {
+			collateralAmount = 0.04 ether; /// Get price of ETH to USDC, get 60% of the @param loanAmount 
+			interestRate = 30; // %
+		} else { // The worst terms for a loan
+			collateralAmount = 0.05 ether; /// Get price of ETH to USDC, get 80% of the @param loanAmount 
+			interestRate = 50; // %
+		}
+	}
+
+	/// @dev Estimate the loan before taking it
+	/// @param loanAmount How much loan the user wants to take out (in USDC)
+	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
+		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
+		(uint256 collateralAmount, uint256 interestRate, int8 creditScore) = estimateLoan(loanAmount);
+		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
+		// Deploy new wallet and fund with loanAmount in USDC
+	}
+
+
 }

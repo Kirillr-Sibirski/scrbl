@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "rm abi/ContractAbi.json && cd contracts && forge inspect Contract abi >> ../abi/ContractAbi.json",
+    "predev": "rm abi/ContractAbi.json && forge inspect Contract abi >> abi/ContractAbi.json",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

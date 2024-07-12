@@ -27,6 +27,6 @@ export const config = createConfig(
             ])
         },
         walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID!,
-        appName: "World ID Onchain Template",
+        appName: "SCRBL",
     }),
 )

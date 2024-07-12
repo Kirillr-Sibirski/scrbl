@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import { ByteHasher } from './helpers/ByteHasher.sol';
 import { IWorldID } from './interfaces/IWorldID.sol';
 
-contract Contract {
+contract Manager {
 	using ByteHasher for bytes;
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -23,12 +23,17 @@ contract Contract {
 	/// @dev The World ID group ID (always 1)
 	uint256 internal immutable groupId = 1;
 
-	/// @dev Whether a nullifier hash has been used already. Used to guarantee an action is only performed once by a single person
-	mapping(uint256 => bool) internal nullifierHashes;
+	/// @dev Normal wallet to WorldID (here are the wallets that have been verified with the World ID)
+	mapping(address => uint256) internal verifiedWallet;
 
 	/// @param nullifierHash The nullifier hash for the verified proof
 	/// @dev A placeholder event that is emitted when a user successfully verifies with World ID
 	event Verified(uint256 nullifierHash);
+
+	/// @param nullifierHash The nullifier hash for the verified proof
+	/// @param old_address The old address that the user wants to change
+	/// @param new_address The new address that the user wants to change to
+	event UpdateVerified(uint256 nullifierHash, address old_address, address new_address);
 
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
@@ -42,11 +47,9 @@ contract Contract {
 	/// @param root The root of the Merkle tree (returned by the JS widget).
 	/// @param nullifierHash The nullifier hash for this proof, preventing double signaling (returned by the JS widget).
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
-	/// @dev Feel free to rename this method however you want! We've used `claim`, `verify` or `execute` in the past.
-	function verifyAndExecute(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
-		// First, we make sure this person hasn't done this before
-		if (nullifierHashes[nullifierHash]) revert DuplicateNullifier(nullifierHash);
-
+	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
+	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
+		if(verifiedWallet[msg.sender] != 0) revert("Wallet address already verified with WorldID");
 		// We now verify the provided proof is valid and the user is verified by World ID
 		worldId.verifyProof(
 			root,
@@ -57,12 +60,29 @@ contract Contract {
 			proof
 		);
 
-		// We now record the user has done this, so they can't do it again (proof of uniqueness)
-		nullifierHashes[nullifierHash] = true;
-
-		// Finally, execute your logic here, for example issue a token, NFT, etc...
-		// Make sure to emit some kind of event afterwards!
+		verifiedWallet[msg.sender] = nullifierHash;
 
 		emit Verified(nullifierHash);
+	}
+
+
+	/// @param signal Old address of the wallet that user wants to change.
+	function changeVerifiedWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
+		if(verifiedWallet[signal] == 0) revert("Wallet address doesn't exist.");
+		// We now verify the provided proof is valid and the user is verified by World ID
+		worldId.verifyProof(
+			root,
+			groupId,
+			abi.encodePacked(signal).hashToField(),
+			nullifierHash,
+			externalNullifier,
+			proof
+		);
+
+		if(verifiedWallet[signal] != nullifierHash) revert("WorldID is different.");
+		verifiedWallet[msg.sender] = nullifierHash; //Updating
+		verifiedWallet[signal] = 0;
+
+		emit UpdateVerified(nullifierHash, signal, msg.sender);
 	}
 }

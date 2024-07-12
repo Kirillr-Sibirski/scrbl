@@ -1,6 +1,8 @@
 [profile.default]
-src = "src"
-out = "out"
+src = "contracts"
+test = "contracts/test"
+out = "contracts/out"
+script = "contracts/script"
 libs = ["lib"]
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

@@ -1,40 +1,30 @@
 {
-  "name": "world-id-onchain-starter",
+  "name": "scrbl",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "rm src/abi/ContractAbi.json && cd contracts && forge inspect Contract abi >> ../src/abi/ContractAbi.json",
+    "predev": "rm abi/ContractAbi.json && forge inspect Contract abi >> abi/ContractAbi.json",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.28.6",
-    "@types/node": "20.1.2",
-    "@types/react": "18.2.6",
-    "@types/react-dom": "18.2.4",
-    "@wagmi/core": "^2.6.9",
-    "@worldcoin/idkit": "^1.1.4",
-    "autoprefixer": "10.4.14",
-    "connectkit": "^1.7.2",
-    "eslint": "8.40.0",
-    "eslint-config-next": "13.4.1",
-    "next": "13.4.1",
-    "postcss": "8.4.23",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "tailwindcss": "3.3.2",
-    "typescript": "5.0.4",
-    "viem": "^2.8.16",
-    "wagmi": "^2.5.11"
+    "@tanstack/react-query": "^5.51.1",
+    "next": "14.2.5",
+    "react": "^18",
+    "react-dom": "^18",
+    "viem": "2.x",
+    "wagmi": "^2.10.10"
   },
   "devDependencies": {
-    "prettier-plugin-sort-imports-desc": "^1.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "@worldcoin/idkit>zustand": "^4.5"
-    }
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5"
   }
 }

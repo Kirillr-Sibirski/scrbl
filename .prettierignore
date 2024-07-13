@@ -1,0 +1,8 @@
+contracts/out
+lib/
+next/
+.github/
+bun.lockb
+remappings.txt
+.gitmodules
+.gitignore

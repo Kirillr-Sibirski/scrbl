@@ -11,23 +11,23 @@ import "../style/globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-	title: "SCRBL",
+    title: "SCRBL",
 }
 
 /* ----------------- Component ---------------- */
 export default function RootLayout({
-	children,
+    children,
 }: Readonly<{
-	children: React.ReactNode
+    children: React.ReactNode
 }>) {
-	return (
-		<html lang="en">
-			<body className={`bg-d-200 text-l-200 ${inter.className}`}>
-				<main className="min-h-screen min-w-[100vw] antialiased">
-					<Header />
-					{children}
-				</main>
-			</body>
-		</html>
-	)
+    return (
+        <html lang="en">
+            <body className={`bg-d-200 text-l-200 ${inter.className}`}>
+                <main className="min-h-screen min-w-[100vw] antialiased">
+                    <Header />
+                    {children}
+                </main>
+            </body>
+        </html>
+    )
 }

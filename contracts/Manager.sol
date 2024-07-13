@@ -195,7 +195,6 @@ contract Manager {
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
 		// Delete the escrow wallet +withdraw all the capital back here
-
 		emit Liquidation(debtor);
 	}
 

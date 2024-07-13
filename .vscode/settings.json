@@ -1,13 +1,13 @@
 {
-    "cSpell.words": [
-        "connectkit",
-        "consts",
-        "predev",
-        "Sepolia",
-        "tanstack",
-        "viem",
-        "Wagmi",
-        "WALLETCONNECT",
-        "zustand"
-    ],
+	"cSpell.words": [
+		"connectkit",
+		"consts",
+		"predev",
+		"Sepolia",
+		"tanstack",
+		"viem",
+		"Wagmi",
+		"WALLETCONNECT",
+		"zustand"
+	]
 }

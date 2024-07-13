@@ -187,6 +187,7 @@ contract Manager {
 	}
 
 	function liquidateLoan(address debtor) external {
+		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
 		// 1Inch liquidation event here
 		// Decrease credit score
 		emit Liquidation(debtor);

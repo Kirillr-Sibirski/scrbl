@@ -6,7 +6,7 @@ import { WagmiProvider } from "wagmi"
 
 export const chain: Chain = {
     id: 10,
-    name: "Optimism Sepolia Anvil Fork",
+    name: "Optimism Anvil Fork",
     nativeCurrency: {
         decimals: 18,
         name: "Optimism Sepolia Anvil Fork Ether",

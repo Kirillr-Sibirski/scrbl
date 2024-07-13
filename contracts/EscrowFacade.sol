@@ -9,6 +9,18 @@ import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import "./Manager";
 import "./EscrowWallet";
 
+interface CErc20 {
+    function mint(uint256) external returns (uint256);
+
+    function exchangeRateCurrent() external returns (uint256);
+
+    function supplyRatePerBlock() external returns (uint256);
+
+    function redeem(uint) external returns (uint);
+
+    function redeemUnderlying(uint) external returns (uint);
+}
+
 contract EscrowFacade {
     using SafeERC20 for IERC20;
     using Address for address;
@@ -65,6 +77,53 @@ contract EscrowFacade {
         if (!liquidate) revert("this swap puts this loan udnerwater");
     }
 
-    
+    function DepositInCompound(address tokenIn, uint64 amountToDeposit) external returns (uint) {
+        Loan loan = escrowManager.s_loans[msg.sender];
+        IERC20 underlying = IERC20(tokenIn);
+        if(loan.escrowWallet != address(0)) revert("This caller does not have any loans initiated from this address");
+
+        if (address(underlying) != USDC && address(underlying) != WETH) revert("can only deposit USDC or ETH");
+        if (underlying.balanceOf(address(loan.escrowWallet)) < amountToDeposit) revert("account does not have enough of token to deposit this amount");
+        CErc20 compoundPool;
+        if (address(underlying) == USDC) {
+            compoundPool = CErc20(address(0xAec1F48e02Cfb822Be958B68C7957156EB3F0b6e));
+        } else {
+            compoundPool = CErc20(address(0x2943ac1216979aD8dB76D9147F64E61adc126e96));
+        }
+
+        
+        underlying.approve(address(compoundPool), amountToDeposit);
+
+        uint mintResult = compoundPool.mint(amountToDeposit);
+        return mintResult;
+    }
+
+    function RedeemCtokensFromPool(address _cToken, uint256 _amountToRedeem, bool _redeemType) external returns(bool) {
+        Loan loan = escrowManager.s_loans[msg.sender];
+        IERC20 underlying;
+        CErc20 cToken = CErc20(_cToken);
+        if (_cToken == address(0xAec1F48e02Cfb822Be958B68C7957156EB3F0b6e)) {
+            underlying = IERC20(USDC);
+        } else if(_cToken == address(0x2943ac1216979aD8dB76D9147F64E61adc126e96)) {
+            underlying = IERC20(WETH);
+        }
+
+        uint256 redeemResult;
+
+        if (redeemType == true) {
+            redeemResult = cToken.redeem(_amountToRedeem);
+        } else {
+            // Retrieve your asset based on an amount of the asset
+            redeemResult = cToken.redeemUnderlying(_amountToRedeem);
+        }
+
+        if (redeemResult == 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
+
+
 

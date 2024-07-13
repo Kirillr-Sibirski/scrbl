@@ -1,3 +1,5 @@
+"use client"
+
 import abi from '@/abi/ContractAbi.json'
 import { ConnectKitButton } from 'connectkit'
 import { IDKitWidget, ISuccessResult, useIDKit } from '@worldcoin/idkit'
@@ -17,6 +19,8 @@ export default function Home() {
 
 	const submitTx = async (proof: ISuccessResult) => {
 		try {
+			console.log("nullifier_hash", BigInt(proof!.nullifier_hash))
+
 			await writeContractAsync({
 				address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
 				account: account.address!,
@@ -33,12 +37,13 @@ export default function Home() {
 				],
 			})
 			setDone(true)
-		} catch (error) {throw new Error((error as BaseError).shortMessage)}
+		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
 
 	return (
 		<div>
 			<ConnectKitButton/>
+
 			{account.isConnected && (<>
 				<IDKitWidget
 					app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}

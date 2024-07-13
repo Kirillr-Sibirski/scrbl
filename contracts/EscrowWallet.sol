@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 pragma abicoder v1;
 
 import {IEscrowWallet} from "./interfaces/IEscrowWallet.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
 // @notice thrown when someone other than the escrow manager is trying to call this function
 error CallerNotEscrowManagerException();
@@ -18,14 +18,14 @@ contract EscrowWallet is IEscrowWallet {
     using Address for address;
 
     /// @notice Account factory this account was deployed with
-    address public immutable factory;
+    address public immutable facade;
 
     /// @notice Credit manager this account is connected to
     address public immutable escrowManager;
 
     /// @dev Ensures that function caller is account factory
-    modifier factoryOnly() {
-        if (msg.sender != factory) {
+    modifier facadeOnly() {
+        if (msg.sender != facade) {
             revert CallerNotFactoryException();
         }
         _;
@@ -40,9 +40,9 @@ contract EscrowWallet is IEscrowWallet {
 
     /// @notice Constructor will deployed by escrow wallet factory contract so msg.sender will be factory contract address
     /// @param _escrowManager escrow manager to connect this account to
-    constructor(address _escrowManager) {
+    constructor(address _escrowManager, address _facadeContract) {
         escrowManager = _escrowManager;
-        factory = msg.sender; 
+        factory = _facadeContract; 
     }
 
     /// @notice Transfers tokens from the escrow wallet, can only be called by the manager
@@ -65,7 +65,7 @@ contract EscrowWallet is IEscrowWallet {
     function execute(address target, bytes calldata data)
         external
         override
-        managerOnly
+        facadeOnly
         returns (bytes memory result)
     {
         result = target.functionCall(data);

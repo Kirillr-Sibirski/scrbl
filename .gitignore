@@ -1,14 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-cache/solidity-files-cache.json
-
-# .env
-.env
 
 # dependencies
 /node_modules
 /.pnp
 .pnp.js
-.yarn/install-state.gz
 
 # testing
 /coverage
@@ -38,11 +33,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# foundry
-/contracts/docs/
-/contracts/cache/
-/contracts/out/
-/contracts/!broadcast
-/contracts/broadcast/*/31337/
-/contracts/broadcast/**/dry-run/

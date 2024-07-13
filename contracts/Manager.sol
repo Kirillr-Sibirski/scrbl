@@ -20,6 +20,7 @@ contract Manager {
 		uint256 collateralAmount; // Stays unchanged, will be used for liquidation
 		address escrowWallet;
 		int16 interestRate;
+		uint256 initialCollateralPercentage;
 	}
 
 	address public usdcTokenAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Mainnet USDC address
@@ -71,10 +72,11 @@ contract Manager {
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
 	/// @param _actionId The World ID action ID
-	constructor(IWorldID _worldId, string memory _appId, string memory _actionId, address pythContract) {
+	/// @param _pythContract Pyth contract oracle contract
+	constructor(IWorldID _worldId, string memory _appId, string memory _actionId, address _pythContract) {
 		worldId = _worldId;
 		externalNullifier = abi.encodePacked(abi.encodePacked(_appId).hashToField(), _actionId).hashToField();
-		pyth = IPyth(pythContract);
+		pyth = IPyth(_pythContract);
 	}
 
 	/// @param signal An arbitrary input from the user, usually the user's wallet address (check README for further details)
@@ -82,22 +84,28 @@ contract Manager {
 	/// @param nullifierHash The nullifier hash for this proof, preventing double signaling (returned by the JS widget).
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
 	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
-	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
-		if(s_verifiedWallet[msg.sender] != 0) revert("Wallet address already verified with WorldID");
-		// We now verify the provided proof is valid and the user is verified by World ID
-		worldId.verifyProof(
-			root,
-			groupId,
-			abi.encodePacked(signal).hashToField(),
-			nullifierHash,
-			externalNullifier,
-			proof
-		);
+	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
+		if(s_verifiedWallet[msg.sender] == 0) {
+			// We now verify the provided proof is valid and the user is verified by World ID
+			worldId.verifyProof(
+				root,
+				groupId,
+				abi.encodePacked(signal).hashToField(),
+				nullifierHash,
+				externalNullifier,
+				proof
+			);
 
-		s_verifiedWallet[msg.sender] = nullifierHash;
-		s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
+			s_verifiedWallet[msg.sender] = nullifierHash;
+			s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
 
-		emit Verified(nullifierHash);
+			emit Verified(nullifierHash);
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
+		} else if(s_loans[msg.sender].debtAmount > 0) {
+			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+		} else {
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
+		}
 	}
 
 
@@ -123,21 +131,25 @@ contract Manager {
 
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
-	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore) {
+	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		creditScore = s_creditScore[msg.sender];
 
 		if(creditScore >= 90) { // The best terms for a loan
-			collateralAmount = 0.02 ether; /// Get price of ETH to USDC, get 10% of the @param loanAmount 
+			initialCollateralPercentage = 10;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
 			interestRate = 274; // % per day (10% per year)
 		} else if(creditScore < 90 && creditScore >= 60) {
-			collateralAmount = 0.03 ether; /// Get price of ETH to USDC, get 30% of the @param loanAmount 
+			initialCollateralPercentage = 30;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price)));  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
 			interestRate = 548; // % per day (20% per year)
-		} else if(creditScore < 60 && creditScore >= 30) {
-			collateralAmount = 0.04 ether; /// Get price of ETH to USDC, get 60% of the @param loanAmount 
+		} else if(creditScore < 60 && creditScore >= 30) { 
+			initialCollateralPercentage = 60;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 60% of the @param loanAmount
 			interestRate = 822; // % per day (30% per year)
 		} else { // The worst terms for a loan
-			collateralAmount = 0.05 ether; /// Get price of ETH to USDC, get 80% of the @param loanAmount 
+			initialCollateralPercentage = 80;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
 			interestRate = 1370; // % per day (50% per year)
 		}
 	}
@@ -146,7 +158,7 @@ contract Manager {
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
 	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
-		(uint256 collateralAmount, int16 interestRate, int16 creditScore) = estimateLoan(loanAmount);
+		(uint256 collateralAmount, int16 interestRate, , uint256 initialCollateralPercentage) = estimateLoan(loanAmount);
 		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
 		address escrowWallet = address(0); // Actual address here
@@ -154,7 +166,8 @@ contract Manager {
             debtAmount: loanAmount,
             collateralAmount: collateralAmount,
             escrowWallet: escrowWallet,
-            interestRate: interestRate
+            interestRate: interestRate,
+			initialCollateralPercentage: initialCollateralPercentage
         });
 		s_loans[msg.sender] = newLoan;
 		s_loanAddresses.push(msg.sender);
@@ -184,17 +197,24 @@ contract Manager {
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
-		if(getHealthRatio(debtor) > 80) { // 80 will depend on the credit score
-			liquidate = false;
-		} else {
-			liquidate = true;
+	function checkLiquidate(bytes calldata /* checkData */) public view returns(bool liquidate, bytes memory performData) { // For chainlink automation
+		for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each debtor
+        	address debtor = s_loanAddresses[i];
+			if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
+				liquidate = false;
+			} else {
+				liquidate = true;
+				performData = abi.encode(debtor);
+			}
 		}
 	}
 
-	function liquidateLoan(address debtor) external {
-		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
-		// 1Inch liquidation event here
+	function liquidateLoan(bytes calldata checkData) external {
+		(bool liquidate, ) = checkLiquidate(checkData);
+		if(!liquidate) revert("The loan can't be liquidated.");
+		// Uniswap liquidation event here, swap collateral ETH for USDC
+		address debtor;
+    	(debtor) = abi.decode(checkData, (address));
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
 		// Delete the escrow wallet +withdraw all the capital back here
@@ -218,8 +238,8 @@ contract Manager {
 
 	// SOME HELPER STUFF
 	function deleteLoan(address debtor) private {
-        delete s_loans[msg.sender];
-        uint256 index = s_loanIndexes[msg.sender];
+        delete s_loans[debtor];
+        uint256 index = s_loanIndexes[debtor];
         
         for (uint256 i = index; i < s_loanAddresses.length - 1; i++) {
             s_loanAddresses[i] = s_loanAddresses[i + 1];
@@ -227,26 +247,17 @@ contract Manager {
         }
         s_loanAddresses.pop();
         
-        delete s_loanIndexes[msg.sender];
+        delete s_loanIndexes[debtor];
 	}
 
-	function getETHtoUSCDPrice(bytes[] calldata priceUpdate) public payable returns(PythStructs.Price price) {
-		// Submit a priceUpdate to the Pyth contract to update the on-chain price.
-		// Updating the price requires paying the fee returned by getUpdateFee.
-		// WARNING: These lines are required to ensure the getPrice call below succeeds. If you remove them, transactions may fail with "0x19abf40e" error.
-		uint fee = pyth.getUpdateFee(priceUpdate);
-		pyth.updatePriceFeeds{ value: fee }(priceUpdate);
-	
-		// Read the current price from a price feed.
-		// Each price feed (e.g., ETH/USD) is identified by a price feed ID.
-		// The complete list of feed IDs is available at https://pyth.network/developers/price-feed-ids
+	function getETHtoUSCDPrice() public view returns(PythStructs.Price memory) {
 		bytes32 priceFeedId = 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace; // ETH/USD
-		PythStructs.Price memory price = pyth.getPrice(priceFeedId);
+		PythStructs.Price memory price = pyth.getPriceUnsafe(priceFeedId);
+		return price;
 	}
 
-	function getHealthRatio() public returns(uint256 health){
+	function getHealthRatio(address debtor) public view returns(uint256 health){
 		if(s_loans[debtor].debtAmount == 0) revert("This loan doesn't exist.");
-		uint feeAmount = pyth.getUpdateFee(updateData);
-		getETHtoUSCDPrice{value:feeAmount}(priceUpdate);
+		health = ((s_loans[debtor].collateralAmount*uint(int(getETHtoUSCDPrice().price))) / s_loans[debtor].debtAmount)*100;
 	}
 }

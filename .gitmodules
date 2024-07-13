@@ -13,3 +13,6 @@
 [submodule "lib/v3-periphery"]
 	path = lib/v3-periphery
 	url = https://github.com/uniswap/v3-periphery
+[submodule "lib/solidity-utils"]
+	path = lib/solidity-utils
+	url = https://github.com/1inch/solidity-utils

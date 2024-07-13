@@ -16,6 +16,11 @@
         "name": "_actionId",
         "type": "string",
         "internalType": "string"
+      },
+      {
+        "name": "_pythContract",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -105,9 +110,46 @@
         "name": "creditScore",
         "type": "int16",
         "internalType": "int16"
+      },
+      {
+        "name": "initialCollateralPercentage",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getETHtoUSCDPrice",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "getHealthRatio",
+    "inputs": [
+      {
+        "name": "debtor",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "health",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -187,7 +229,33 @@
         "internalType": "uint256[8]"
       }
     ],
-    "outputs": [],
+    "outputs": [
+      {
+        "name": "score",
+        "type": "int16",
+        "internalType": "int16"
+      },
+      {
+        "name": "loan",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "debt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "collateral",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "interest",
+        "type": "int16",
+        "internalType": "int16"
+      }
+    ],
     "stateMutability": "nonpayable"
   },
   {

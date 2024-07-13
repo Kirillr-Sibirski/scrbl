@@ -84,7 +84,7 @@ contract Manager {
 	/// @param nullifierHash The nullifier hash for this proof, preventing double signaling (returned by the JS widget).
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
 	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
-	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16, bool, uint256, uint256, int16) {
+	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
 		if(s_verifiedWallet[msg.sender] == 0) {
 			// We now verify the provided proof is valid and the user is verified by World ID
 			worldId.verifyProof(

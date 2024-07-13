@@ -12,16 +12,13 @@ export default function Home() {
 	const { setOpen } = useIDKit()
 	const [done, setDone] = useState(false)
 	const { data: hash, isPending, error, writeContractAsync } = useWriteContract()
-	const { isLoading: isConfirming, isSuccess: isConfirmed } = 
-		useWaitForTransactionReceipt({
-			hash,
-		}) 
+	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, }) 
 
 	const submitTx = async (proof: ISuccessResult) => {
 		try {
 			console.log("nullifier_hash", BigInt(proof!.nullifier_hash))
 
-			await writeContractAsync({
+			let a = await writeContractAsync({
 				address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
 				account: account.address!,
 				abi,
@@ -36,7 +33,9 @@ export default function Home() {
 					)[0],
 				],
 			})
-			setDone(true)
+
+			console.log("tx completed", a)
+			// setDone(true)
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
 

@@ -1,32 +1,30 @@
 import { createConfig, http } from 'wagmi'
-import { type Chain } from 'viem'
-import { fallback, injected, unstable_connector } from '@wagmi/core';
+import { sepolia } from "wagmi/chains"
 import { getDefaultConfig } from 'connectkit';
 
-export const chain: Chain = {
-	id: 11155111,
-	name: "Ethereum Sepolia Anvil Fork",
-	nativeCurrency: {
-        decimals: 18,
-        name: "Ethereum Sepolia Anvil Fork Ether",
-        symbol: "SepoliaETH",
-	},
-	rpcUrls: {
-	    default: { http: ["http://127.0.0.1:8545/"] },
-	},
-	testnet: true,
-};
+// export const chain: Chain = {
+// 	id: 11155111,
+// 	name: "Ethereum Sepolia Anvil Fork",
+// 	nativeCurrency: {
+//         decimals: 18,
+//         name: "Ethereum Sepolia Anvil Fork Ether",
+//         symbol: "SepoliaETH",
+// 	},
+// 	rpcUrls: {
+// 	    default: { http: ["http://127.0.0.1:8545/"] },
+// 	},
+// 	testnet: true,
+// };
+
+console.log(process.env.ALCHEMY_API_KEY)
 
 export const config = createConfig(
     getDefaultConfig({
-        chains: [chain],
+        chains: [sepolia],
         transports: {
-            [chain.id]: fallback([
-                unstable_connector(injected),
-                http(chain.rpcUrls.default.http[0]),
-            ])
+            [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY!}`)
         },
         walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID!,
-        appName: "World ID Onchain Template",
+        appName: "SCRBL",
     }),
 )

@@ -165,7 +165,7 @@ contract Manager {
 		// Delete s_loans shit
 	}
 
-	function checkLiquidate(address debtor) external returns(bool liquidate) {
+	function checkLiquidate(address debtor) external returns(bool liquidate) { // For chainlink automation
 		if(s_loans[msg.sender].debtAmount == 0) revert("This loan doesn't exist.");
 		if(true /* health ratio is bad */) {
 			liquidate = false;
@@ -181,10 +181,10 @@ contract Manager {
 	}
 
 	function topUpInterestRate() external {
-		// Do a check that enough time has passed
-		if(block.timestamp < (lastInterestTopUp+INTEREST_INTERVAL)) revert("Not enough time has passed");
-        for (uint256 i = 0; i < s_loanAddresses.length; i++) {
-			// Loop through each loan and increase debtAmount by whatever their interest rate is.
+		if(block.timestamp < (lastInterestTopUp+INTEREST_INTERVAL)) revert("Not enough time has passed"); // Do a check that enough time has passed
+        for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each loan and increase debtAmount by whatever their interest rate is.
+			currentDebt = s_loans[s_loanAddresses[i]].debtAmount;
+			s_loans[s_loanAddresses[i]].debtAmount = currentDebt + (currentDebt * (s_loans[s_loanAddresses[i]].interestRate/100));
         }
 	}
 }

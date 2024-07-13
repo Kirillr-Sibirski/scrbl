@@ -5,4 +5,5 @@ forge-std/=lib/forge-std/src/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 pyth-sdk-solidity/=lib/pyth-sdk-solidity/
 solidity-utils/=lib/solidity-utils/contracts/
+@uniswap/v3-core/=lib/v3-core/
 v3-periphery/=lib/v3-periphery/contracts/

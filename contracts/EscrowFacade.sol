@@ -6,8 +6,8 @@ import { ISwapRouter } from "v3-periphery/interfaces/ISwapRouter.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import "./Manager";
-import "./EscrowWallet";
+import { Manager } from "./Manager.sol";
+import { EscrowWallet } from "./EscrowWallet.sol";
 
 interface CErc20 {
     function mint(uint256) external returns (uint256);

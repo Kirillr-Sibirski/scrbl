@@ -15,7 +15,7 @@ contract Manager {
 		uint256 debtAmount; // In USDC, will be increasing with interested rate
 		uint256 collateralAmount; // Stays unchanged, will be used for liquidation
 		address escrowWallet;
-		int8 interestRate;
+		int16 interestRate;
 	}
 
 	address public usdcTokenAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Mainnet USDC address
@@ -47,7 +47,9 @@ contract Manager {
 
 	/// @dev List of current loans
 	mapping(address => Loan) internal s_loans;
+	mapping(address => uint256) internal s_loanIndexes;
 	address[] internal s_loanAddresses;
+	
 
 	/// @param nullifierHash The nullifier hash for the verified proof
 	/// @dev A placeholder event that is emitted when a user successfully verifies with World ID
@@ -116,22 +118,22 @@ contract Manager {
 
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
-	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, uint256 interestRate, int8 creditScore) {
+	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int8 creditScore) {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		creditScore = s_creditScore[msg.sender];
 
 		if(creditScore >= 90) { // The best terms for a loan
 			collateralAmount = 0.02 ether; /// Get price of ETH to USDC, get 10% of the @param loanAmount 
-			interestRate = 0.0274; // % per day (10% per year)
+			interestRate = 274; // % per day (10% per year)
 		} else if(creditScore < 90 && creditScore >= 60) {
 			collateralAmount = 0.03 ether; /// Get price of ETH to USDC, get 30% of the @param loanAmount 
-			interestRate = 0.0548; // % per day (20% per year)
+			interestRate = 548; // % per day (20% per year)
 		} else if(creditScore < 60 && creditScore >= 30) {
 			collateralAmount = 0.04 ether; /// Get price of ETH to USDC, get 60% of the @param loanAmount 
-			interestRate = 0.0822; // % per day (30% per year)
+			interestRate = 822; // % per day (30% per year)
 		} else { // The worst terms for a loan
 			collateralAmount = 0.05 ether; /// Get price of ETH to USDC, get 80% of the @param loanAmount 
-			interestRate = 0.137; // % per day (50% per year)
+			interestRate = 1370; // % per day (50% per year)
 		}
 	}
 
@@ -139,17 +141,24 @@ contract Manager {
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
 	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
-		(uint256 collateralAmount, uint256 interestRate, int8 creditScore) = estimateLoan(loanAmount);
+		(uint256 collateralAmount, int16 interestRate, int8 creditScore) = estimateLoan(loanAmount);
 		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
 		address escrowWallet = address(0); // Actual address here
-		s_loans[msg.sender] = (loanAmount, collateralAmount, escrowWallet, interestRate);
+		Loan memory newLoan = Loan({
+            debtAmount: loanAmount,
+            collateralAmount: collateralAmount,
+            escrowWallet: escrowWallet,
+            interestRate: interestRate
+        });
+		s_loans[msg.sender] = newLoan;
 		s_loanAddresses.push(msg.sender);
+		s_loanIndexes[msg.sender] = s_loanAddresses.length - 1;
 	}
 
 	/// @dev This function is used to improve the health ratio of user's loan
 	function repayWithoutCollateralWithdrawal(uint256 repayAmount) external {
-		if(repayAmount = 0) revert("Amount must be greater than zero");
+		if(repayAmount == 0) revert("Amount must be greater than zero");
         // Transfer USDC from the user to the contract
         bool success = usdcToken.transferFrom(msg.sender, address(this), repayAmount);
 		if(!success) revert("USDC transfer failed");
@@ -165,8 +174,7 @@ contract Manager {
 		bool success = usdcToken.transferFrom(msg.sender, address(this), s_loans[msg.sender].debtAmount);
 		if(!success) revert("USDC transfer failed");
 		// Delete the escrow wallet +allow withdrawal
-		delete s_loans[msg.sender];
-		delete s_loanAddresses[msg.sender];
+		deleteLoan(msg.sender);
 	}
 
 	function checkLiquidate(address debtor) external returns(bool liquidate) { // For chainlink automation
@@ -188,7 +196,28 @@ contract Manager {
 		if(block.timestamp < (lastInterestTopUp+INTEREST_INTERVAL)) revert("Not enough time has passed"); // Do a check that enough time has passed
         for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each loan and increase debtAmount by whatever their interest rate is.
 			uint256 currentDebt = s_loans[s_loanAddresses[i]].debtAmount;
-			s_loans[s_loanAddresses[i]].debtAmount = currentDebt + (currentDebt * (s_loans[s_loanAddresses[i]].interestRate/100));
+            int16 interestRate = s_loans[s_loanAddresses[i]].interestRate;
+
+            // Ensure the interest rate is safely converted and applied
+            if(interestRate <= 0) revert("Negative interest rate not allowed");
+            uint256 interestRateUint = uint256(int256(interestRate));
+
+            uint256 newDebtAmount = currentDebt + (currentDebt * (interestRateUint / 10) / 100);
+            s_loans[s_loanAddresses[i]].debtAmount = newDebtAmount;
+		}
+	}
+
+	// SOME HELPER STUFF
+	function deleteLoan(address debtor) private {
+        delete s_loans[msg.sender];
+        uint256 index = s_loanIndexes[msg.sender];
+        
+        for (uint256 i = index; i < s_loanAddresses.length - 1; i++) {
+            s_loanAddresses[i] = s_loanAddresses[i + 1];
+            s_loanIndexes[s_loanAddresses[i]] = i;
         }
+        s_loanAddresses.pop();
+        
+        delete s_loanIndexes[msg.sender];
 	}
 }

@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import { Script, console } from "forge-std/Script.sol";
 import { Manager } from "../Manager.sol";
 import { IWorldID } from "../interfaces/IWorldID.sol";
-import { IPyth } from "pyth-sdk-solidity/IPyth.sol";
+import { IPyth } from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 
 contract DeployManager is Script {
     function run() external {
@@ -19,8 +19,15 @@ contract DeployManager is Script {
             address(0x0708325268dF9F66270F1401206434524814508b)
         );
 
-        console.log("ETH/USD Price:", (uint(uint64(manager.getETHtoUSCDPrice().price)))/(10 ** 8));
+        console.log("Oracle:", uint(int(manager.getETHtoUSCDPrice().price)));
+        manager.verifyWallet();
 
+        (uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) = manager.estimateLoan(100);
+
+        console.log("Collateral:", collateralAmount / (10**16));
+        console.log("interestRate:", uint(int(interestRate)));
+        console.log("creditScore:", uint(int(creditScore)));
+        console.log("initialCollateralPercentage:", initialCollateralPercentage);
         vm.stopBroadcast();
     }
 }

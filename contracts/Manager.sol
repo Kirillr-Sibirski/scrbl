@@ -147,19 +147,19 @@ contract Manager {
 
 		if(creditScore >= 90) { // The best terms for a loan
 			initialCollateralPercentage = 10;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8))); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
 			interestRate = 274; // % per day (10% per year)
 		} else if(creditScore < 90 && creditScore >= 60) {
 			initialCollateralPercentage = 30;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price)));  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8)));  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
 			interestRate = 548; // % per day (20% per year)
 		} else if(creditScore < 60 && creditScore >= 30) { 
 			initialCollateralPercentage = 60;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 60% of the @param loanAmount
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8))); /// Get price of ETH to USDC, get 60% of the @param loanAmount
 			interestRate = 822; // % per day (30% per year)
 		} else { // The worst terms for a loan
 			initialCollateralPercentage = 80;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8))); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
 			interestRate = 1370; // % per day (50% per year)
 		}
 	}

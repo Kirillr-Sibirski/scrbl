@@ -7,6 +7,12 @@
 [submodule "lib/pyth-sdk-solidity"]
 	path = lib/pyth-sdk-solidity
 	url = https://github.com/pyth-network/pyth-sdk-solidity
+[submodule "lib/swap-router-contracts"]
+	path = lib/swap-router-contracts
+	url = https://github.com/uniswap/swap-router-contracts
+[submodule "lib/v3-periphery"]
+	path = lib/v3-periphery
+	url = https://github.com/uniswap/v3-periphery
 [submodule "lib/solidity-utils"]
 	path = lib/solidity-utils
 	url = https://github.com/1inch/solidity-utils

@@ -197,7 +197,7 @@ contract Manager {
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
+	function checkLiquidate(bytes calldata /* checkData */, address debtor) public view returns(bool liquidate, bytes memory /* performData */) { // For chainlink automation
 		if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
 			liquidate = false;
 		} else {
@@ -205,8 +205,9 @@ contract Manager {
 		}
 	}
 
-	function liquidateLoan(address debtor) external {
-		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
+	function liquidateLoan(bytes calldata checkData, address debtor) external {
+		(bool liquidate, ) = checkLiquidate(checkData, debtor);
+		if(!liquidate) revert("The loan can't be liquidated.");
 		// 1Inch liquidation event here, swap collateral ETH for USDC
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score

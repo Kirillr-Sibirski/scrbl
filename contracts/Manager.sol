@@ -84,23 +84,28 @@ contract Manager {
 	/// @param nullifierHash The nullifier hash for this proof, preventing double signaling (returned by the JS widget).
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
 	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
-	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16) {
-		if(s_verifiedWallet[msg.sender] != 0) revert("Wallet address already verified with WorldID");
-		// We now verify the provided proof is valid and the user is verified by World ID
-		worldId.verifyProof(
-			root,
-			groupId,
-			abi.encodePacked(signal).hashToField(),
-			nullifierHash,
-			externalNullifier,
-			proof
-		);
+	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16, bool, uint256, uint256, int16) {
+		if(s_verifiedWallet[msg.sender] == 0) {
+			// We now verify the provided proof is valid and the user is verified by World ID
+			worldId.verifyProof(
+				root,
+				groupId,
+				abi.encodePacked(signal).hashToField(),
+				nullifierHash,
+				externalNullifier,
+				proof
+			);
 
-		s_verifiedWallet[msg.sender] = nullifierHash;
-		s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
+			s_verifiedWallet[msg.sender] = nullifierHash;
+			s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
 
-		emit Verified(nullifierHash);
-		return (s_creditScore[msg.sender]);
+			emit Verified(nullifierHash);
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
+		} else if(s_loans[msg.sender].debtAmount > 0) {
+			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+		} else {
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
+		}
 	}
 
 

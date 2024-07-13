@@ -2,9 +2,9 @@
 
 import abi from "@/abi/ContractAbi.json"
 import { IDKitWidget, ISuccessResult, useIDKit } from "@worldcoin/idkit"
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, type BaseError } from "wagmi"
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt, type BaseError } from "wagmi"
 import { decodeAbiParameters, parseAbiParameters } from "viem"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 
 export default function Home() {
@@ -13,6 +13,17 @@ export default function Home() {
     const [done, setDone] = useState(false)
     const { data: hash, isPending, error, writeContractAsync } = useWriteContract()
     const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash })
+
+    const { data, isPending: fetchIsPending } = useReadContract({
+        abi,
+        address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+        functionName: "getVerifiedWallet",
+    });
+    // const { isLoading: fetchIsLoading, isSuccess: fetchIsLoaded } = useWaitForTransactionReceipt({ hash: fetchHash })
+    
+    useEffect(() => {
+        console.log("Fetch data:", data)
+    })
 
     const submitTx = async (proof: ISuccessResult) => {
         try {

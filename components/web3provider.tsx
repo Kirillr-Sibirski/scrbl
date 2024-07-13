@@ -33,11 +33,10 @@ const config = createConfig(
 		},
 
 		// Required API Keys
-		walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+		walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID!,
 
 		// Required App Info
 		appName: "SCRBL",
-
 		// Optional App Info
 		// appDescription: "Your App Description",
 		// appUrl: "https://family.co", // your app's url

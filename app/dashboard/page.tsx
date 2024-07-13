@@ -37,7 +37,7 @@ export default function Dashboard() {
             <div className="grid-cols-subgrid col-span-5 flex flex-col gap-1">
                 <h1 className="ml-4 font-semibold text-lg">Escrow Wallet Operations</h1>
                 <div className="h-full px-6 py-4 flex flex-col rounded-lg bg-d-100/70 border-2 border-d-100">
-
+                    
                 </div>
             </div>
         </div>

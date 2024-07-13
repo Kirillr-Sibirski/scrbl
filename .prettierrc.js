@@ -8,5 +8,6 @@ module.exports = {
 	useTabs: true,
 	bracketSpacing: true,
 	arrowParens: "avoid",
-	// plugins: [require('prettier-plugin-sort-imports-desc')],
+	plugins: [
+		require("prettier-plugin-solidity")],
 }

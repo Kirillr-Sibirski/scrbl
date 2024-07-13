@@ -52,6 +52,8 @@ contract Manager {
 	/// @dev Normal wallet to WorldID (here are the wallets that have been verified with the World ID)
 	mapping(address => uint256) internal s_verifiedWallet;
 
+	mapping(uint256 => bool) internal nullifierHashes;
+
 	/// @dev Credit scores are stored here /100
 	mapping(address => int16) internal s_creditScore;
 
@@ -72,6 +74,8 @@ contract Manager {
 	event ExistingLoanVerify(int16, bool, uint256, uint256, int16);
 	event NonExistingLoanVerify(int16, bool, uint256, uint256, int16);
 
+	event Verified(uint256 nullifierHash);
+
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
 	/// @param _actionId The World ID action ID
@@ -90,13 +94,36 @@ contract Manager {
 		return res;
 	}
 
+	function verifyAndExecute(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
+		// First, we make sure this person hasn't done this before
+		if (nullifierHashes[nullifierHash]) revert DuplicateNullifier(nullifierHash);
+
+		// We now verify the provided proof is valid and the user is verified by World ID
+		worldId.verifyProof(
+			root,
+			groupId,
+			abi.encodePacked(signal).hashToField(),
+			nullifierHash,
+			externalNullifier,
+			proof
+		);
+
+		// We now record the user has done this, so they can't do it again (proof of uniqueness)
+		nullifierHashes[nullifierHash] = true;
+
+		// Finally, execute your logic here, for example issue a token, NFT, etc...
+		// Make sure to emit some kind of event afterwards!
+
+		emit Verified(nullifierHash);
+	}
+
 	/// @param signal An arbitrary input from the user, usually the user's wallet address (check README for further details)
 	/// @param root The root of the Merkle tree (returned by the JS widget).
 	/// @param nullifierHash The nullifier hash for this proof, preventing double signaling (returned by the JS widget).
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
 	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
 	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
-		if(s_verifiedWallet[msg.sender] == 0) {
+		if(s_verifiedWallet[signal] == 0) {
 			// We now verify the provided proof is valid and the user is verified by World ID
 			worldId.verifyProof(
 				root,
@@ -107,17 +134,27 @@ contract Manager {
 				proof
 			);
 
-			s_verifiedWallet[msg.sender] = nullifierHash;
-			s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
+			s_verifiedWallet[signal] = nullifierHash;
+			s_creditScore[signal] = DEFAULT_CREDIT_SCORE;
 
-			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
-		} else if(s_loans[msg.sender].debtAmount > 0) {
-			emit ExistingLoanVerify(s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
-			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+			emit NonExistingLoanVerify(s_creditScore[signal], false, 0, 0, 0);
+			return (s_creditScore[signal], false, 0, 0, 0);
+		} else if(s_loans[signal].debtAmount > 0) {
+			emit ExistingLoanVerify(s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);
+			return (s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);
 		} else {
-			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
+			emit NonExistingLoanVerify(s_creditScore[signal], false, 0, 0, 0);
+			return (s_creditScore[signal], false, 0, 0, 0);
+		}
+	}
+
+	function getVerifiedWallet(address signal) public view returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
+		if(s_verifiedWallet[signal] == 0) {
+			return (s_creditScore[signal], false, 0, 0, 0);
+		} else if(s_loans[signal].debtAmount > 0) {
+			return (s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);
+		} else {
+			return (s_creditScore[signal], false, 0, 0, 0);
 		}
 	}
 
@@ -150,19 +187,19 @@ contract Manager {
 
 		if(creditScore >= 90) { // The best terms for a loan
 			initialCollateralPercentage = 10;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8))); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
 			interestRate = 274; // % per day (10% per year)
 		} else if(creditScore < 90 && creditScore >= 60) {
 			initialCollateralPercentage = 30;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price)));  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8)));  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
 			interestRate = 548; // % per day (20% per year)
 		} else if(creditScore < 60 && creditScore >= 30) { 
 			initialCollateralPercentage = 60;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 60% of the @param loanAmount
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8))); /// Get price of ETH to USDC, get 60% of the @param loanAmount
 			interestRate = 822; // % per day (30% per year)
 		} else { // The worst terms for a loan
 			initialCollateralPercentage = 80;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
+			collateralAmount = ((loanAmount * initialCollateralPercentage/100)*(10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8))); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
 			interestRate = 1370; // % per day (50% per year)
 		}
 	}

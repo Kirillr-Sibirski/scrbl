@@ -2,28 +2,28 @@
 pragma solidity ^0.8.13;
 pragma abicoder v2;
 
-import { ISwapRouter } from "v3-periphery/interfaces/ISwapRouter.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
-import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import { Manager } from "./Manager.sol";
-import { EscrowWallet } from "./EscrowWallet.sol";
+// import { ISwapRouter } from "v3-periphery/interfaces/ISwapRouter.sol";
+// import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+// import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
+// import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
+// import { Manager } from "./Manager.sol";
+// import { EscrowWallet } from "./EscrowWallet.sol";
 
-interface CErc20 {
-    function mint(uint256) external returns (uint256);
+// interface CErc20 {
+//     function mint(uint256) external returns (uint256);
 
-    function exchangeRateCurrent() external returns (uint256);
+//     function exchangeRateCurrent() external returns (uint256);
 
-    function supplyRatePerBlock() external returns (uint256);
+//     function supplyRatePerBlock() external returns (uint256);
 
-    function redeem(uint) external returns (uint);
+//     function redeem(uint) external returns (uint);
 
-    function redeemUnderlying(uint) external returns (uint);
-}
+//     function redeemUnderlying(uint) external returns (uint);
+// }
 
-contract EscrowFacade {
-    using SafeERC20 for IERC20;
-    using Address for address;
+// contract EscrowFacade {
+//     using SafeERC20 for IERC20;
+//     using Address for address;
 
     Manager public immutable escrowManager;
     address public immutable swapRouterAddr = 0xE592427A0AEce92De3Edee1F18E0157C05861564; //optimism mainnet and eth sepolia address 
@@ -45,9 +45,9 @@ contract EscrowFacade {
         Manager.Loan memory loan = escrowManager.GetLoanDetailsByAddress(msg.sender);
         if(loan.escrowWallet != address(0)) revert("This caller does not have any loans initiated from this address");
         
-        IERC20 token0 = IERC20(tokenIn);
-        if (token0.balanceOf(loan.escrowWallet) < amountIn) revert("escrow wallet does not have enough of token0 to perfrom swap");
-        if (tokenOut != WETH && tokenOut != USDC) revert("caller is attempting to swap to a not whitelisted token");
+//         IERC20 token0 = IERC20(tokenIn);
+//         if (token0.balanceOf(loan.escrowWallet) < amountIn) revert("escrow wallet does not have enough of token0 to perfrom swap");
+//         if (tokenOut != WETH && tokenOut != USDC) revert("caller is attempting to swap to a not whitelisted token");
 
         bytes memory approveCallData = abi.encodeWithSelector(token0.approve.selector, address(swapRouter), amountIn);
         EscrowWallet escrow = EscrowWallet(loan.escrowWallet);
@@ -55,17 +55,17 @@ contract EscrowFacade {
         bool approved = abi.decode(result, (bool));
         if (approved == false) revert("unable to approve transfer for token0 in escrow wallet");
 
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                fee: poolFee,
-                recipient: address(loan.escrowWallet),
-                deadline: block.timestamp,
-                amountIn: amountIn,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
-            });
+//         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+//             .ExactInputSingleParams({
+//                 tokenIn: tokenIn,
+//                 tokenOut: tokenOut,
+//                 fee: poolFee,
+//                 recipient: address(loan.escrowWallet),
+//                 deadline: block.timestamp,
+//                 amountIn: amountIn,
+//                 amountOutMinimum: 0,
+//                 sqrtPriceLimitX96: 0
+//             });
 
         
         escrow.execute(address(swapRouter), abi.encodeWithSelector(swapRouter.exactInputSingle.selector, params));
@@ -89,11 +89,11 @@ contract EscrowFacade {
         }
 
         
-        underlying.approve(address(compoundPool), amountToDeposit);
+//         underlying.approve(address(compoundPool), amountToDeposit);
 
-        uint mintResult = compoundPool.mint(amountToDeposit);
-        return mintResult;
-    }
+//         uint mintResult = compoundPool.mint(amountToDeposit);
+//         return mintResult;
+//     }
 
     function RedeemCtokensFromPool(address _cToken, uint256 _amountToRedeem, bool _redeemType) external returns(bool) {
         //Manager.Loan memory loan = escrowManager.GetLoanDetailsByAddress(msg.sender);
@@ -105,7 +105,7 @@ contract EscrowFacade {
             underlying = IERC20(WETH);
         }
 
-        uint256 redeemResult;
+//         uint256 redeemResult;
 
         if (_redeemType == true) {
             redeemResult = cToken.redeem(_amountToRedeem);
@@ -114,13 +114,13 @@ contract EscrowFacade {
             redeemResult = cToken.redeemUnderlying(_amountToRedeem);
         }
 
-        if (redeemResult == 0) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-}
+//         if (redeemResult == 0) {
+//             return true;
+//         } else {
+//             return false;
+//         }
+//     }
+// }
 
 
 

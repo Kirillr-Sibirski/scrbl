@@ -5,8 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { WagmiProvider } from "wagmi"
 
 export const chain: Chain = {
-    id: 11155420,
-    name: "Optimism Sepolia Anvil Fork",
+    id: 10,
+    name: "Optimism Anvil Fork",
     nativeCurrency: {
         decimals: 18,
         name: "Optimism Sepolia Anvil Fork Ether",
@@ -21,7 +21,7 @@ const config = getDefaultConfig({
     appName: "SCRBL",
     projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID!,
     chains: [chain],
-    ssr: true,
+    ssr: false,
 })
 const queryClient = new QueryClient()
 

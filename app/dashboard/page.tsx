@@ -1,26 +1,41 @@
 "use client"
 
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from "wagmi"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { IDKitWidget, ISuccessResult, useIDKit, VerificationLevel } from "@worldcoin/idkit"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import abi from "@/abi/ContractAbi.json";
 import { decodeAbiParameters, parseAbiParameters } from "viem"
 
 export default function Dashboard() {
+    const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
+
     const account = useAccount()
     const [accountDataFetched, setAccountDataFetched] = useState(false)
 
     const { setOpen } = useIDKit()
-    const { data: hash, isPending, writeContract } = useWriteContract();
-    const { isLoading, isSuccess } = useWaitForTransactionReceipt({ hash })
+    // Account Verification
+    const { data: verifyHash, isPending: verifyIsPending, writeContract } = useWriteContract();
+    const { isLoading: verifyIsLoading, isSuccess: verifyIsLoaded } = useWaitForTransactionReceipt({ hash: verifyHash })
+    // Loan Fetch
+    const { data, isPending: fetchIsPending } = useReadContract({
+        abi,
+        address,
+        functionName: "getVerifiedWallet",
+        args: [
+            account.address!,
+        ]
+    });
+    // const { isLoading: fetchIsLoading, isSuccess: fetchIsLoaded } = useWaitForTransactionReceipt({ hash: fetchHash })
+    
+    useEffect(() => {
+        console.log("Fetch data:", data)
+    })
 
     async function verifyWallet(proof: ISuccessResult) {
         try {
-            // Event listeners
-
             writeContract({
-                address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+                address,
                 account: account.address!,
                 abi,
                 functionName: "verifyWallet",
@@ -58,9 +73,12 @@ export default function Dashboard() {
                             Sign-in with an orb-verified WorldID passport to continue.
                         </p>
                         
-                        {isLoading && <p>Transaction in progress...</p>}
-                        {isSuccess && <p>Transaction successful.</p>}
-                        {hash && <p>Transaction Hash: {hash}</p>}
+                        {verifyIsLoading && <p>Transaction in progress...</p>}
+                        {verifyIsLoaded && <p>Transaction successful.</p>}
+                        {verifyHash && <p>Transaction Hash: {verifyHash}</p>}
+
+                        {fetchIsPending && <p>Fetch pending</p>}
+                        {!fetchIsPending && <p>Fetched data: {data}</p>}
 
                         {/* {error &&  <p className="text-red-500">Error: {(error as BaseError).shortMessage || error.message}</p>} */}
                     </>)}
@@ -77,8 +95,8 @@ export default function Dashboard() {
                                 autoClose
                             />
 
-                            <button onClick={() => setOpen(true)} disabled={isPending} className="px-4 py-2 text-center font-semibold rounded-lg border-[1px] hover:brightness-125 active:scale-95 transition duration-200 bg-ac/30 border-ac text-l-100 hover:text-l-200">
-                                {isPending ? "Confirming..." : "Verify Wallet"}
+                            <button onClick={() => setOpen(true)} disabled={verifyIsPending} className="px-4 py-2 text-center font-semibold rounded-lg border-[1px] hover:brightness-125 active:scale-95 transition duration-200 bg-ac/30 border-ac text-l-100 hover:text-l-200">
+                                {verifyIsPending ? "Confirming..." : "Verify Wallet"}
                             </button>
                         </>)}
                     </div>

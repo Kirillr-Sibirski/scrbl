@@ -1,4 +1,39 @@
+"use client"
+
+import { IDKitWidget, ISuccessResult, useIDKit } from "@worldcoin/idkit"
+import { ConnectKitButton } from "connectkit"
+import { useState } from "react"
+import { BaseError, decodeAbiParameters, parseAbiParameters } from "viem"
+import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
+import abi from "@/abi/ContractAbi.json"
+
 export default function Dashboard() {
+    const account = useAccount()
+    const { setOpen } = useIDKit()
+    const [done, setDone] = useState(false)
+    const { data: hash, isPending, error, writeContractAsync } = useWriteContract()
+    const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({hash,})
+
+    const submitTx = async (proof: ISuccessResult) => {
+        try {
+            await writeContractAsync({
+                address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+                account: account.address!,
+                abi,
+                functionName: "verifyWallet",
+                args: [
+                    account.address!,
+                    BigInt(proof!.merkle_root),
+                    BigInt(proof!.nullifier_hash),
+                    decodeAbiParameters(parseAbiParameters("uint256[8]"), proof!.proof as `0x${string}`)[0],
+                ],
+            })
+            setDone(true)
+        } catch (error) {
+            throw new Error((error as BaseError).shortMessage)
+        }
+    }
+
     return (
         <div className="container px-32 grid grid-cols-8 gap-4">
             <div className="grid-cols-subgrid col-span-full flex flex-row items-center gap-2">
@@ -30,14 +65,36 @@ export default function Dashboard() {
             </div>
             <div className="grid-cols-subgrid col-span-3 flex flex-col gap-1">
                 <h1 className="ml-4 font-semibold text-lg">Loan Operations</h1>
-                <div className="h-full px-6 py-4 flex flex-col rounded-lg bg-d-100/70 border-2 border-d-100">
-                    
-                </div>
+                <div className="h-full px-6 py-4 flex flex-col rounded-lg bg-d-100/70 border-2 border-d-100"></div>
             </div>
             <div className="grid-cols-subgrid col-span-5 flex flex-col gap-1">
                 <h1 className="ml-4 font-semibold text-lg">Escrow Wallet Operations</h1>
                 <div className="h-full px-6 py-4 flex flex-col rounded-lg bg-d-100/70 border-2 border-d-100">
-                    
+                    <ConnectKitButton />
+
+                    {account.isConnected && (<>
+                            <IDKitWidget
+                                app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
+                                action={process.env.NEXT_PUBLIC_ACTION as string}
+                                signal={account.address}
+                                onSuccess={submitTx}
+                                autoClose
+                            />
+
+                            {!done && (
+                                <button onClick={() => setOpen(true)}>
+                                    {!hash &&
+                                        (isPending
+                                            ? "Pending, please check your wallet..."
+                                            : "Verify and Execute Transaction")}
+                                </button>
+                            )}
+
+                            {hash && <p>Transaction Hash: {hash}</p>}
+                            {isConfirming && <p>Waiting for confirmation...</p>}
+                            {isConfirmed && <p>Transaction confirmed.</p>}
+                            {error && <p>Error: {(error as BaseError).message}</p>}
+                    </>)}
                 </div>
             </div>
         </div>

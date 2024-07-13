@@ -7,3 +7,6 @@
 [submodule "lib/pyth-sdk-solidity"]
 	path = lib/pyth-sdk-solidity
 	url = https://github.com/pyth-network/pyth-sdk-solidity
+[submodule "lib/solidity-utils"]
+	path = lib/solidity-utils
+	url = https://github.com/1inch/solidity-utils

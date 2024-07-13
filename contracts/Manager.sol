@@ -149,20 +149,24 @@ contract Manager {
 
 	/// @dev This function is used to improve the health ratio of user's loan
 	function repayWithoutCollateralWithdrawal(uint256 repayAmount) external {
-		if(repayAmount = 0) revert ("Amount must be greater than zero");
+		if(repayAmount = 0) revert("Amount must be greater than zero");
         // Transfer USDC from the user to the contract
         bool success = usdcToken.transferFrom(msg.sender, address(this), repayAmount);
-        require(success, "USDC transfer failed");
-
-        // Decrease the owed amount to the protocol
-        s_loans[msg.sender].debtAmount -= repayAmount;
+		if(!success) revert("USDC transfer failed");
+        s_loans[msg.sender].debtAmount -= repayAmount; // Decrease the owed amount to the protocol
 
         emit RepayLoan(msg.sender, repayAmount);
 	}
 
 	/// @dev This function is used to fully repay and terminate the loan
 	function repayFull() external {
-		// Delete s_loans shit
+		if(s_loans[msg.sender].debtAmount == 0) revert("This loan doesn't exist.");
+		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
+		bool success = usdcToken.transferFrom(msg.sender, address(this), s_loans[msg.sender].debtAmount);
+		if(!success) revert("USDC transfer failed");
+		// Delete the escrow wallet +allow withdrawal
+		delete s_loans[msg.sender];
+		delete s_loanAddresses[msg.sender];
 	}
 
 	function checkLiquidate(address debtor) external returns(bool liquidate) { // For chainlink automation
@@ -183,7 +187,7 @@ contract Manager {
 	function topUpInterestRate() external {
 		if(block.timestamp < (lastInterestTopUp+INTEREST_INTERVAL)) revert("Not enough time has passed"); // Do a check that enough time has passed
         for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each loan and increase debtAmount by whatever their interest rate is.
-			currentDebt = s_loans[s_loanAddresses[i]].debtAmount;
+			uint256 currentDebt = s_loans[s_loanAddresses[i]].debtAmount;
 			s_loans[s_loanAddresses[i]].debtAmount = currentDebt + (currentDebt * (s_loans[s_loanAddresses[i]].interestRate/100));
         }
 	}

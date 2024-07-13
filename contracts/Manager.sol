@@ -72,10 +72,11 @@ contract Manager {
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
 	/// @param _actionId The World ID action ID
-	constructor(IWorldID _worldId, string memory _appId, string memory _actionId, address pythContract) {
+	/// @param _pythContract Pyth contract oracle contract
+	constructor(IWorldID _worldId, string memory _appId, string memory _actionId, address _pythContract) {
 		worldId = _worldId;
 		externalNullifier = abi.encodePacked(abi.encodePacked(_appId).hashToField(), _actionId).hashToField();
-		pyth = IPyth(pythContract);
+		pyth = IPyth(_pythContract);
 	}
 
 	/// @param signal An arbitrary input from the user, usually the user's wallet address (check README for further details)
@@ -83,7 +84,7 @@ contract Manager {
 	/// @param nullifierHash The nullifier hash for this proof, preventing double signaling (returned by the JS widget).
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
 	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
-	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
+	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16) {
 		if(s_verifiedWallet[msg.sender] != 0) revert("Wallet address already verified with WorldID");
 		// We now verify the provided proof is valid and the user is verified by World ID
 		worldId.verifyProof(
@@ -99,6 +100,7 @@ contract Manager {
 		s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
 
 		emit Verified(nullifierHash);
+		return (s_creditScore[msg.sender]);
 	}
 
 
@@ -190,16 +192,16 @@ contract Manager {
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(address debtor, bytes[] calldata priceUpdate, bytes[] calldata updateData) public returns(bool liquidate) { // For chainlink automation
-		if(getHealthRatio(debtor, priceUpdate, updateData) >= s_loans[debtor].initialCollateralPercentage-10) { // they have 10 percent margin of safety
+	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
+		if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
 			liquidate = false;
 		} else {
 			liquidate = true;
 		}
 	}
 
-	function liquidateLoan(address debtor, bytes[] calldata priceUpdate, bytes[] calldata updateData) external {
-		if(!checkLiquidate(debtor, priceUpdate, updateData)) revert("The loan can't be liquidated.");
+	function liquidateLoan(address debtor) external {
+		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
 		// 1Inch liquidation event here
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
@@ -236,23 +238,14 @@ contract Manager {
         delete s_loanIndexes[msg.sender];
 	}
 
-	function getETHtoUSCDPrice(bytes[] calldata priceUpdate) public payable returns(PythStructs.Price memory price) {
-		// Submit a priceUpdate to the Pyth contract to update the on-chain price.
-		// Updating the price requires paying the fee returned by getUpdateFee.
-		// WARNING: These lines are required to ensure the getPrice call below succeeds. If you remove them, transactions may fail with "0x19abf40e" error.
-		uint fee = pyth.getUpdateFee(priceUpdate);
-		pyth.updatePriceFeeds{ value: fee }(priceUpdate);
-	
-		// Read the current price from a price feed.
-		// Each price feed (e.g., ETH/USD) is identified by a price feed ID.
-		// The complete list of feed IDs is available at https://pyth.network/developers/price-feed-ids
+	function getETHtoUSCDPrice() public payable returns(uint64) {
 		bytes32 priceFeedId = 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace; // ETH/USD
 		PythStructs.Price memory price = pyth.getPrice(priceFeedId);
+		return uint64(price.price);
 	}
 
-	function getHealthRatio(address debtor, bytes[] calldata priceUpdate, bytes[] calldata updateData) public returns(int16 health){
+	function getHealthRatio(address debtor) public returns(uint256 health){
 		if(s_loans[debtor].debtAmount == 0) revert("This loan doesn't exist.");
-		uint feeAmount = pyth.getUpdateFee(updateData);
-		//getETHtoUSCDPrice{value:feeAmount}(priceUpdate);
+		health = ((s_loans[debtor].collateralAmount*getETHtoUSCDPrice()) / s_loans[debtor].debtAmount)*100;
 	}
 }

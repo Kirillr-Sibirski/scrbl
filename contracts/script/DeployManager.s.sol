@@ -13,7 +13,7 @@ contract DeployManager is Script {
 
         // Deploy the Manager contract
         Manager manager = new Manager(
-            IWorldID(0x11cA3127182f7583EfC416a8771BD4d11Fae4334),
+            0x11cA3127182f7583EfC416a8771BD4d11Fae4334,
             'app_staging_462987db1a03edf27aed2f71941b16a8',
             'lending',
             address(0x0708325268dF9F66270F1401206434524814508b)

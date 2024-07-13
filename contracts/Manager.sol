@@ -54,11 +54,6 @@ contract Manager {
 	mapping(address => Loan) internal s_loans;
 	mapping(address => uint256) internal s_loanIndexes;
 	address[] internal s_loanAddresses;
-	
-
-	/// @param nullifierHash The nullifier hash for the verified proof
-	/// @dev A placeholder event that is emitted when a user successfully verifies with World ID
-	event Verified(uint256 nullifierHash);
 
 	/// @param nullifierHash The nullifier hash for the verified proof
 	/// @param old_address The old address that the user wants to change
@@ -68,6 +63,9 @@ contract Manager {
 	event RepayLoan(address, uint256);
 
 	event Liquidation(address);
+
+	event ExistingLoanVerify(int16, bool, uint256, uint256, int16);
+	event NonExistingLoanVerify(int16, bool, uint256, uint256, int16);
 
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
@@ -99,12 +97,14 @@ contract Manager {
 			s_verifiedWallet[msg.sender] = nullifierHash;
 			s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
 
-			emit Verified(nullifierHash);
 			return (s_creditScore[msg.sender], false, 0, 0, 0);
+			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
 		} else if(s_loans[msg.sender].debtAmount > 0) {
 			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+			emit ExistingLoanVerify(s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
 		} else {
 			return (s_creditScore[msg.sender], false, 0, 0, 0);
+			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
 		}
 	}
 

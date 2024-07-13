@@ -4,7 +4,7 @@ pragma abicoder v1;
 
 import {IEscrowWallet} from "./interfaces/IEscrowWallet.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "solidity-utils/contracts/libraries/SafeERC20.sol";
+import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 // @notice thrown when someone other than the escrow manager is trying to call this function
@@ -18,10 +18,10 @@ contract EscrowWallet is IEscrowWallet {
     using Address for address;
 
     /// @notice Account factory this account was deployed with
-    address public immutable override factory;
+    address public immutable factory;
 
     /// @notice Credit manager this account is connected to
-    address public immutable override escrowManager;
+    address public immutable escrowManager;
 
     /// @dev Ensures that function caller is account factory
     modifier factoryOnly() {
@@ -41,7 +41,7 @@ contract EscrowWallet is IEscrowWallet {
     /// @notice Constructor will deployed by escrow wallet factory contract so msg.sender will be factory contract address
     /// @param _escrowManager escrow manager to connect this account to
     constructor(address _escrowManager) {
-        creditManager = _escrowManager;
+        escrowManager = _escrowManager;
         factory = msg.sender; 
     }
 

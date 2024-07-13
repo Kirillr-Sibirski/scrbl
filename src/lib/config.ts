@@ -16,13 +16,13 @@ import { getDefaultConfig } from 'connectkit';
 // 	testnet: true,
 // };
 
-console.log(process.env.ALCHEMY_API_KEY)
+console.log(process.env.NEXT_PUBLIC_ALCHEMY_API_KEY)
 
 export const config = createConfig(
     getDefaultConfig({
         chains: [sepolia],
         transports: {
-            [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY!}`)
+            [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY!}`)
         },
         walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID!,
         appName: "SCRBL",

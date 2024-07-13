@@ -108,6 +108,16 @@ contract Manager {
 		}
 	}
 
+	function getVerifiedWallet() public returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
+		if(s_verifiedWallet[msg.sender] == 0) {
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
+		} else if(s_loans[msg.sender].debtAmount > 0) {
+			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+		} else {
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
+		}
+	}
+
 
 	/// @param signal Old address of the wallet that user wants to change.
 	function changeVerifiedWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {

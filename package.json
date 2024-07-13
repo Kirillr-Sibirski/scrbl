@@ -10,14 +10,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@rainbow-me/rainbowkit": "2",
     "@tanstack/react-query": "^5.51.1",
     "@worldcoin/idkit": "^1.2.2",
+    "encoding": "^0.1.13",
     "next": "14.2.5",
+    "pino-pretty": "^11.2.1",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^2.4.0",
     "viem": "2.x",
-    "wagmi": "^2.10.10"
+    "wagmi": "2"
   },
   "devDependencies": {
     "@types/node": "^20",

@@ -4,6 +4,8 @@
 // Next.js
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+// Web3
+import { ConnectButton } from "@rainbow-me/rainbowkit"
 // Other
 import { twMerge } from "tailwind-merge"
 
@@ -19,7 +21,7 @@ export default function Header() {
 	]
 
 	return (
-		<header className="min-w-[100vw] h-14 top-0 mb-6 bg-d-200/30 border-b-[1px] border-l-100/[0.2]">
+		<header className="min-w-[100vw] h-14 relative z-50 top-0 flex-shrink-0 mb-6 bg-d-200/30 border-b-[1px] border-l-100/[0.2]">
 			<div className="container h-full flex flex-row items-center gap-6">
 				<h1 className="text-2xl font-bold [text-shadow:_1px_2px_0_rgb(0_0_0_/_40%)]">SCRBL</h1>
 
@@ -36,7 +38,9 @@ export default function Header() {
 						</Link>
 					))}
 
-				<div className="min-w-[2px] h-[70%] bg-l-100/[0.2] ml-auto mr-6"/>
+				<div className="min-w-[2px] h-[70%] bg-l-100/[0.2] ml-auto mr-2"/>
+
+				<ConnectButton/>
 			</div>
 		</header>
 	)

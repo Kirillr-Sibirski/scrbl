@@ -2,15 +2,15 @@
 // Next.js
 import type { Metadata } from "next"
 // Components
+import Provider from "@/components/provider"
 import Header from "@/components/header"
 // Other
 import { Inter } from "next/font/google"
+import "@rainbow-me/rainbowkit/styles.css"
 import "../style/globals.css"
-import Web3Provider from "@/components/web3provider"
 
 /* ----------------- Variables ---------------- */
 const inter = Inter({ subsets: ["latin"] })
-
 export const metadata: Metadata = {
     title: "SCRBL",
 }
@@ -23,14 +23,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <Web3Provider>
-                <body className={`bg-d-200 text-l-200 ${inter.className}`}>
-                    <main className="min-h-screen min-w-[100vw] antialiased">
-                        <Header />
-                        {children}
-                    </main>
-                </body>
-            </Web3Provider>
+            <body className={`h-screen w-[100vw] antialiased bg-d-200 text-l-200 ${inter.className}`}>
+                <Provider>
+                    <Header />
+                    {children}
+                </Provider>
+            </body>
         </html>
     )
 }

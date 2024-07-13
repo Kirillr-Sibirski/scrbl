@@ -192,7 +192,7 @@ contract Manager {
 	}
 
 	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
-		if(getHealthRatio(debtor) >= s_loans[debtor].initialCollateralPercentage-10) { // they have 10 percent margin of safety
+		if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
 			liquidate = false;
 		} else {
 			liquidate = true;
@@ -243,8 +243,8 @@ contract Manager {
 		return uint64(price.price);
 	}
 
-	function getHealthRatio(address debtor) public returns(int16 health){
+	function getHealthRatio(address debtor) public returns(uint256 health){
 		if(s_loans[debtor].debtAmount == 0) revert("This loan doesn't exist.");
-		//getETHtoUSCDPrice{value:feeAmount}(priceUpdate);
+		health = ((s_loans[debtor].collateralAmount*getETHtoUSCDPrice()) / s_loans[debtor].debtAmount)*100;
 	}
 }

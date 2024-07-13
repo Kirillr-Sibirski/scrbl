@@ -2,11 +2,14 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
+import "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 import { ByteHasher } from './helpers/ByteHasher.sol';
 import { IWorldID } from './interfaces/IWorldID.sol';
 
 contract Manager {
 	using ByteHasher for bytes;
+	IPyth pyth;
 
 	int16 private constant DEFAULT_CREDIT_SCORE = 50;
 	uint256 private constant INTEREST_INTERVAL = 86400; //seconds (1 day)
@@ -68,9 +71,10 @@ contract Manager {
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
 	/// @param _actionId The World ID action ID
-	constructor(IWorldID _worldId, string memory _appId, string memory _actionId) {
+	constructor(IWorldID _worldId, string memory _appId, string memory _actionId, address pythContract) {
 		worldId = _worldId;
 		externalNullifier = abi.encodePacked(abi.encodePacked(_appId).hashToField(), _actionId).hashToField();
+		pyth = IPyth(pythContract);
 	}
 
 	/// @param signal An arbitrary input from the user, usually the user's wallet address (check README for further details)
@@ -181,8 +185,7 @@ contract Manager {
 	}
 
 	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
-		if(s_loans[msg.sender].debtAmount == 0) revert("This loan doesn't exist.");
-		if(true /* health ratio is bad */) {
+		if(getHealthRatio(debtor) > 80) { // 80 will depend on the credit score
 			liquidate = false;
 		} else {
 			liquidate = true;
@@ -225,5 +228,25 @@ contract Manager {
         s_loanAddresses.pop();
         
         delete s_loanIndexes[msg.sender];
+	}
+
+	function getETHtoUSCDPrice(bytes[] calldata priceUpdate) public payable returns(PythStructs.Price price) {
+		// Submit a priceUpdate to the Pyth contract to update the on-chain price.
+		// Updating the price requires paying the fee returned by getUpdateFee.
+		// WARNING: These lines are required to ensure the getPrice call below succeeds. If you remove them, transactions may fail with "0x19abf40e" error.
+		uint fee = pyth.getUpdateFee(priceUpdate);
+		pyth.updatePriceFeeds{ value: fee }(priceUpdate);
+	
+		// Read the current price from a price feed.
+		// Each price feed (e.g., ETH/USD) is identified by a price feed ID.
+		// The complete list of feed IDs is available at https://pyth.network/developers/price-feed-ids
+		bytes32 priceFeedId = 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace; // ETH/USD
+		PythStructs.Price memory price = pyth.getPrice(priceFeedId);
+	}
+
+	function getHealthRatio() public returns(uint256 health){
+		if(s_loans[debtor].debtAmount == 0) revert("This loan doesn't exist.");
+		uint feeAmount = pyth.getUpdateFee(updateData);
+		getETHtoUSCDPrice{value:feeAmount}(priceUpdate);
 	}
 }

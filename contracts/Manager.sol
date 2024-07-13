@@ -197,18 +197,24 @@ contract Manager {
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(bytes calldata /* checkData */, address debtor) public view returns(bool liquidate, bytes memory /* performData */) { // For chainlink automation
-		if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
-			liquidate = false;
-		} else {
-			liquidate = true;
+	function checkLiquidate(bytes calldata /* checkData */) public view returns(bool liquidate, bytes memory performData) { // For chainlink automation
+		for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each debtor
+        	address debtor = s_loanAddresses[i];
+			if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
+				liquidate = false;
+			} else {
+				liquidate = true;
+				performData = abi.encode(debtor);
+			}
 		}
 	}
 
-	function liquidateLoan(bytes calldata checkData, address debtor) external {
-		(bool liquidate, ) = checkLiquidate(checkData, debtor);
+	function liquidateLoan(bytes calldata checkData) external {
+		(bool liquidate, ) = checkLiquidate(checkData);
 		if(!liquidate) revert("The loan can't be liquidated.");
-		// 1Inch liquidation event here, swap collateral ETH for USDC
+		// Uniswap liquidation event here, swap collateral ETH for USDC
+		address debtor;
+    	(debtor) = abi.decode(checkData, (address));
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
 		// Delete the escrow wallet +withdraw all the capital back here

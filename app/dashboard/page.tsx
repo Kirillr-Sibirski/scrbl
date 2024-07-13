@@ -1,8 +1,8 @@
 "use client"
 
-import { type BaseError, useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
-import { IDKitWidget, ISuccessResult, useIDKit } from "@worldcoin/idkit"
+import { IDKitWidget, ISuccessResult, useIDKit, VerificationLevel } from "@worldcoin/idkit"
 import React, { useState } from "react"
 import abi from "@/abi/ContractAbi.json";
 import { decodeAbiParameters, parseAbiParameters } from "viem"
@@ -12,25 +12,29 @@ export default function Dashboard() {
     const [accountDataFetched, setAccountDataFetched] = useState(false)
 
     const { setOpen } = useIDKit()
-    const { data: hash, error, isPending, writeContract } = useWriteContract();
+    const { data: hash, isPending, writeContract } = useWriteContract();
     const { isLoading, isSuccess } = useWaitForTransactionReceipt({ hash })
 
     async function verifyWallet(proof: ISuccessResult) {
-        writeContract({
-            address: `0x${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}`,
-            account: account.address!,
-            abi,
-            functionName: "verifyWallet",
-            args: [
-                account.address!,
-                BigInt(proof!.merkle_root),
-                BigInt(proof!.nullifier_hash),
-                decodeAbiParameters(
-                    parseAbiParameters("uint256[8]"),
-                    `0x${proof!.proof}`,
-                )[0],
-            ],
-        })
+        try {
+            writeContract({
+                address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+                account: account.address!,
+                abi,
+                functionName: "verifyWallet",
+                args: [
+                    account.address!,
+                    BigInt(proof!.merkle_root),
+                    BigInt(proof!.nullifier_hash),
+                    decodeAbiParameters(
+                        parseAbiParameters('uint256[8]'),
+                        proof!.proof as `0x${string}`
+                    )[0],
+                ],
+            })
+        } catch (error) {
+            console.error(error)
+        }
     }
 
     return (<>
@@ -56,17 +60,18 @@ export default function Dashboard() {
                         {isSuccess && <p>Transaction successful.</p>}
                         {hash && <p>Transaction Hash: {hash}</p>}
 
-                        {error &&  <p className="text-red-500">Error: {(error as BaseError).shortMessage || error.message}</p>}
+                        {/* {error &&  <p className="text-red-500">Error: {(error as BaseError).shortMessage || error.message}</p>} */}
                     </>)}
                     
                     <div className="h-full flex flex-col justify-center items-center">
                         {(account.isDisconnected || account.isConnecting) && (<div className="my-auto scale-125"><ConnectButton /></div>)}
                         {account.isConnected && (<>
                             <IDKitWidget
-                                app_id={`app_${process.env.NEXT_PUBLIC_APP_ID!}`}
+                                app_id={process.env.NEXT_PUBLIC_APP_ID! as `app_${string}`}
                                 action={process.env.NEXT_PUBLIC_ACTION!}
                                 signal={account.address}
                                 onSuccess={verifyWallet}
+                                verification_level={VerificationLevel.Orb}
                                 autoClose
                             />
 

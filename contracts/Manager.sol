@@ -97,14 +97,14 @@ contract Manager {
 			s_verifiedWallet[msg.sender] = nullifierHash;
 			s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
 
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
 			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
 		} else if(s_loans[msg.sender].debtAmount > 0) {
-			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
 			emit ExistingLoanVerify(s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
 		} else {
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
 			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
+			return (s_creditScore[msg.sender], false, 0, 0, 0);
 		}
 	}
 

@@ -20,7 +20,7 @@ contract Manager {
 		uint256 collateralAmount; // Stays unchanged, will be used for liquidation
 		address escrowWallet;
 		int16 interestRate;
-		int16 initialCollateralPercentage;
+		uint256 initialCollateralPercentage;
 	}
 
 	address public usdcTokenAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Mainnet USDC address
@@ -131,25 +131,25 @@ contract Manager {
 
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
-	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, int16 initialCollateralPercentage) {
+	function estimateLoan(uint256 loanAmount) public returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		creditScore = s_creditScore[msg.sender];
 
 		if(creditScore >= 90) { // The best terms for a loan
-			collateralAmount = 0.02 ether; /// Get price of ETH to USDC, get 10% of the @param loanAmount 
 			initialCollateralPercentage = 10;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice()); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
 			interestRate = 274; // % per day (10% per year)
 		} else if(creditScore < 90 && creditScore >= 60) {
-			collateralAmount = 0.03 ether; /// Get price of ETH to USDC, get 30% of the @param loanAmount 
 			initialCollateralPercentage = 30;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice());  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
 			interestRate = 548; // % per day (20% per year)
-		} else if(creditScore < 60 && creditScore >= 30) {
-			collateralAmount = 0.04 ether; /// Get price of ETH to USDC, get 60% of the @param loanAmount 
+		} else if(creditScore < 60 && creditScore >= 30) { 
 			initialCollateralPercentage = 60;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice()); /// Get price of ETH to USDC, get 60% of the @param loanAmount
 			interestRate = 822; // % per day (30% per year)
 		} else { // The worst terms for a loan
-			collateralAmount = 0.05 ether; /// Get price of ETH to USDC, get 80% of the @param loanAmount 
 			initialCollateralPercentage = 80;
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice()); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
 			interestRate = 1370; // % per day (50% per year)
 		}
 	}
@@ -158,7 +158,7 @@ contract Manager {
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
 	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
-		(uint256 collateralAmount, int16 interestRate, int16 creditScore, int16 initialCollateralPercentage) = estimateLoan(loanAmount);
+		(uint256 collateralAmount, int16 interestRate, , uint256 initialCollateralPercentage) = estimateLoan(loanAmount);
 		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
 		address escrowWallet = address(0); // Actual address here
@@ -231,8 +231,8 @@ contract Manager {
 
 	// SOME HELPER STUFF
 	function deleteLoan(address debtor) private {
-        delete s_loans[msg.sender];
-        uint256 index = s_loanIndexes[msg.sender];
+        delete s_loans[debtor];
+        uint256 index = s_loanIndexes[debtor];
         
         for (uint256 i = index; i < s_loanAddresses.length - 1; i++) {
             s_loanAddresses[i] = s_loanAddresses[i + 1];
@@ -240,7 +240,7 @@ contract Manager {
         }
         s_loanAddresses.pop();
         
-        delete s_loanIndexes[msg.sender];
+        delete s_loanIndexes[debtor];
 	}
 
 	function getETHtoUSCDPrice() public payable returns(uint64) {

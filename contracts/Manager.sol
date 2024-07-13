@@ -20,6 +20,7 @@ contract Manager {
 		uint256 collateralAmount; // Stays unchanged, will be used for liquidation
 		address escrowWallet;
 		int16 interestRate;
+		int16 initialCollateralPercentage;
 	}
 
 	address public usdcTokenAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Mainnet USDC address
@@ -123,21 +124,25 @@ contract Manager {
 
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
-	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore) {
+	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, int16 initialCollateralPercentage) {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		creditScore = s_creditScore[msg.sender];
 
 		if(creditScore >= 90) { // The best terms for a loan
 			collateralAmount = 0.02 ether; /// Get price of ETH to USDC, get 10% of the @param loanAmount 
+			initialCollateralPercentage = 10;
 			interestRate = 274; // % per day (10% per year)
 		} else if(creditScore < 90 && creditScore >= 60) {
 			collateralAmount = 0.03 ether; /// Get price of ETH to USDC, get 30% of the @param loanAmount 
+			initialCollateralPercentage = 30;
 			interestRate = 548; // % per day (20% per year)
 		} else if(creditScore < 60 && creditScore >= 30) {
 			collateralAmount = 0.04 ether; /// Get price of ETH to USDC, get 60% of the @param loanAmount 
+			initialCollateralPercentage = 60;
 			interestRate = 822; // % per day (30% per year)
 		} else { // The worst terms for a loan
 			collateralAmount = 0.05 ether; /// Get price of ETH to USDC, get 80% of the @param loanAmount 
+			initialCollateralPercentage = 80;
 			interestRate = 1370; // % per day (50% per year)
 		}
 	}
@@ -146,7 +151,7 @@ contract Manager {
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
 	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
-		(uint256 collateralAmount, int16 interestRate, int16 creditScore) = estimateLoan(loanAmount);
+		(uint256 collateralAmount, int16 interestRate, int16 creditScore, int16 initialCollateralPercentage) = estimateLoan(loanAmount);
 		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
 		address escrowWallet = address(0); // Actual address here
@@ -154,7 +159,8 @@ contract Manager {
             debtAmount: loanAmount,
             collateralAmount: collateralAmount,
             escrowWallet: escrowWallet,
-            interestRate: interestRate
+            interestRate: interestRate,
+			initialCollateralPercentage: initialCollateralPercentage
         });
 		s_loans[msg.sender] = newLoan;
 		s_loanAddresses.push(msg.sender);
@@ -184,16 +190,16 @@ contract Manager {
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
-		if(getHealthRatio(debtor) > 80) { // 80 will depend on the credit score
+	function checkLiquidate(address debtor, bytes[] calldata priceUpdate, bytes[] calldata updateData) public returns(bool liquidate) { // For chainlink automation
+		if(getHealthRatio(debtor, priceUpdate, updateData) >= s_loans[debtor].initialCollateralPercentage-10) { // they have 10 percent margin of safety
 			liquidate = false;
 		} else {
 			liquidate = true;
 		}
 	}
 
-	function liquidateLoan(address debtor) external {
-		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
+	function liquidateLoan(address debtor, bytes[] calldata priceUpdate, bytes[] calldata updateData) external {
+		if(!checkLiquidate(debtor, priceUpdate, updateData)) revert("The loan can't be liquidated.");
 		// 1Inch liquidation event here
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
@@ -230,7 +236,7 @@ contract Manager {
         delete s_loanIndexes[msg.sender];
 	}
 
-	function getETHtoUSCDPrice(bytes[] calldata priceUpdate) public payable returns(PythStructs.Price price) {
+	function getETHtoUSCDPrice(bytes[] calldata priceUpdate) public payable returns(PythStructs.Price memory price) {
 		// Submit a priceUpdate to the Pyth contract to update the on-chain price.
 		// Updating the price requires paying the fee returned by getUpdateFee.
 		// WARNING: These lines are required to ensure the getPrice call below succeeds. If you remove them, transactions may fail with "0x19abf40e" error.
@@ -244,9 +250,9 @@ contract Manager {
 		PythStructs.Price memory price = pyth.getPrice(priceFeedId);
 	}
 
-	function getHealthRatio() public returns(uint256 health){
+	function getHealthRatio(address debtor, bytes[] calldata priceUpdate, bytes[] calldata updateData) public returns(int16 health){
 		if(s_loans[debtor].debtAmount == 0) revert("This loan doesn't exist.");
 		uint feeAmount = pyth.getUpdateFee(updateData);
-		getETHtoUSCDPrice{value:feeAmount}(priceUpdate);
+		//getETHtoUSCDPrice{value:feeAmount}(priceUpdate);
 	}
 }

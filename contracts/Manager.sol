@@ -6,6 +6,8 @@ import "pyth-sdk-solidity/IPyth.sol";
 import "pyth-sdk-solidity/PythStructs.sol";
 import { ByteHasher } from './helpers/ByteHasher.sol';
 import { IWorldID } from './interfaces/IWorldID.sol';
+import { EscrowWallet } from './EscrowWallet.sol';
+import { EscrowFacade } from './EscrowFacade.sol';
 
 contract Manager {
 	using ByteHasher for bytes;
@@ -23,7 +25,10 @@ contract Manager {
 		uint256 initialCollateralPercentage;
 	}
 
-	address public usdcTokenAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Mainnet USDC address
+	address public immutable facadeContractAddr;
+
+	//address public usdcTokenAddress = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // Mainnet USDC address
+	address public usdcTokenAddress = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //eth sepolia usdc
     IERC20 usdcToken = IERC20(usdcTokenAddress);
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -71,10 +76,18 @@ contract Manager {
 	/// @param _appId The World ID app ID
 	/// @param _actionId The World ID action ID
 	/// @param _pythContract Pyth contract oracle contract
-	constructor(IWorldID _worldId, string memory _appId, string memory _actionId, address _pythContract) {
-		worldId = _worldId;
+	constructor(address _worldId, string memory _appId, string memory _actionId, address _pythContract) {
+		worldId = IWorldID(_worldId);
 		externalNullifier = abi.encodePacked(abi.encodePacked(_appId).hashToField(), _actionId).hashToField();
 		pyth = IPyth(_pythContract);
+		EscrowFacade facadeContract = new EscrowFacade(address(this));
+		facadeContractAddr = address(facadeContract);
+	}
+
+	function GetLoanDetailsByAddress(address userAddr) public view returns(Loan memory) {
+		Loan memory res = s_loans[userAddr];
+		if (res.escrowWallet == address(0)) revert("there is no loan for this user");
+		return res;
 	}
 
 	/// @param signal An arbitrary input from the user, usually the user's wallet address (check README for further details)
@@ -158,14 +171,17 @@ contract Manager {
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
 	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
+		if(usdcToken.balanceOf(address(this)) < loanAmount) revert("protocol does not have enough usdc to make this loan");
 		(uint256 collateralAmount, int16 interestRate, , uint256 initialCollateralPercentage) = estimateLoan(loanAmount);
-		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
+		if(msg.value < collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
-		address escrowWallet = address(0); // Actual address here
+		EscrowWallet escrowWallet = new EscrowWallet(address(this), facadeContractAddr); // Actual address here
+		bool successful = usdcToken.transferFrom(address(this), address(escrowWallet), loanAmount);
+		if(!successful) revert("transaction to fund escrow wallet was unsuccessful");
 		Loan memory newLoan = Loan({
             debtAmount: loanAmount,
             collateralAmount: collateralAmount,
-            escrowWallet: escrowWallet,
+            escrowWallet: address(escrowWallet),
             interestRate: interestRate,
 			initialCollateralPercentage: initialCollateralPercentage
         });

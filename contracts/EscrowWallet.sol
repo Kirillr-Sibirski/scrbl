@@ -11,28 +11,28 @@ import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 error CallerNotEscrowManagerException();
 
 // @notice thrown when caller is not the escrow facade account
-error CallerNotFactoryException();
+error CallerNotFacadeException();
 
 contract EscrowWallet is IEscrowWallet {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    /// @notice Account factory this account was deployed with
+    /// @notice facade this account was deployed with
     address public immutable facade;
 
     /// @notice Credit manager this account is connected to
-    address public immutable escrowManager;
+    address public immutable escrowManagerAddr;
 
-    /// @dev Ensures that function caller is account factory
+    /// @dev Ensures that function caller is escrow facade
     modifier facadeOnly() {
         if (msg.sender != facade) {
-            revert CallerNotFactoryException();
+            revert CallerNotFacadeException();
         }
         _;
     }
 
     modifier managerOnly() {
-        if (msg.sender != escrowManager) {
+        if (msg.sender != escrowManagerAddr) {
             revert CallerNotEscrowManagerException();
         }
         _;
@@ -41,8 +41,12 @@ contract EscrowWallet is IEscrowWallet {
     /// @notice Constructor will deployed by escrow wallet factory contract so msg.sender will be factory contract address
     /// @param _escrowManager escrow manager to connect this account to
     constructor(address _escrowManager, address _facadeContract) {
-        escrowManager = _escrowManager;
-        factory = _facadeContract; 
+        escrowManagerAddr = _escrowManager;
+        facade = _facadeContract; 
+    }
+
+    function escrowManager() public view returns(address) {
+        return escrowManagerAddr;
     }
 
     /// @notice Transfers tokens from the escrow wallet, can only be called by the manager
@@ -79,7 +83,7 @@ contract EscrowWallet is IEscrowWallet {
     function rescue(address target, bytes calldata data)
         external
         override
-        factoryOnly
+        facadeOnly
     {
         target.functionCall(data);
     }

@@ -17,6 +17,8 @@ export default function Dashboard() {
 
     async function verifyWallet(proof: ISuccessResult) {
         try {
+            // Event listeners
+
             writeContract({
                 address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
                 account: account.address!,

@@ -10,6 +10,7 @@ contract Manager {
 
 	int8 private constant DEFAULT_CREDIT_SCORE = 50;
 	uint256 private constant INTEREST_INTERVAL = 86400; //seconds (1 day)
+	int8 private constant SCORE_STEP = 10;
 
 	struct Loan {
 		uint256 debtAmount; // In USDC, will be increasing with interested rate
@@ -174,6 +175,8 @@ contract Manager {
 		bool success = usdcToken.transferFrom(msg.sender, address(this), s_loans[msg.sender].debtAmount);
 		if(!success) revert("USDC transfer failed");
 		// Delete the escrow wallet +allow withdrawal
+		int16 creditScore = s_loans[msg.sender].creditScore;
+		s_loans[msg.sender].creditScore = creditScore+SCORE_STEP; // Increase credit score
 		deleteLoan(msg.sender);
 	}
 
@@ -189,7 +192,10 @@ contract Manager {
 	function liquidateLoan(address debtor) external {
 		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
 		// 1Inch liquidation event here
-		// Decrease credit score
+		int16 creditScore = s_loans[debtor].creditScore;
+		s_loans[debtor].creditScore = creditScore-SCORE_STEP; // Decrease credit score
+		// Delete the escrow wallet +withdraw all the capital back here
+
 		emit Liquidation(debtor);
 	}
 

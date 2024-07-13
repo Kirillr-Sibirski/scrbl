@@ -8,9 +8,9 @@ import { IWorldID } from './interfaces/IWorldID.sol';
 contract Manager {
 	using ByteHasher for bytes;
 
-	int8 private constant DEFAULT_CREDIT_SCORE = 50;
+	int16 private constant DEFAULT_CREDIT_SCORE = 50;
 	uint256 private constant INTEREST_INTERVAL = 86400; //seconds (1 day)
-	int8 private constant SCORE_STEP = 10;
+	int16 private constant SCORE_STEP = 10;
 
 	struct Loan {
 		uint256 debtAmount; // In USDC, will be increasing with interested rate
@@ -44,7 +44,7 @@ contract Manager {
 	mapping(address => uint256) internal s_verifiedWallet;
 
 	/// @dev Credit scores are stored here /100
-	mapping(address => int8) internal s_creditScore;
+	mapping(address => int16) internal s_creditScore;
 
 	/// @dev List of current loans
 	mapping(address => Loan) internal s_loans;
@@ -119,7 +119,7 @@ contract Manager {
 
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
-	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int8 creditScore) {
+	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore) {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		creditScore = s_creditScore[msg.sender];
 
@@ -142,7 +142,7 @@ contract Manager {
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
 	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
-		(uint256 collateralAmount, int16 interestRate, int8 creditScore) = estimateLoan(loanAmount);
+		(uint256 collateralAmount, int16 interestRate, int16 creditScore) = estimateLoan(loanAmount);
 		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
 		address escrowWallet = address(0); // Actual address here
@@ -175,12 +175,12 @@ contract Manager {
 		bool success = usdcToken.transferFrom(msg.sender, address(this), s_loans[msg.sender].debtAmount);
 		if(!success) revert("USDC transfer failed");
 		// Delete the escrow wallet +allow withdrawal
-		int16 creditScore = s_loans[msg.sender].creditScore;
-		s_loans[msg.sender].creditScore = creditScore+SCORE_STEP; // Increase credit score
+		int16 creditScore = s_creditScore[msg.sender];
+		s_creditScore[msg.sender] = creditScore+SCORE_STEP; // Increase credit score
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(address debtor) external returns(bool liquidate) { // For chainlink automation
+	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
 		if(s_loans[msg.sender].debtAmount == 0) revert("This loan doesn't exist.");
 		if(true /* health ratio is bad */) {
 			liquidate = false;
@@ -192,10 +192,9 @@ contract Manager {
 	function liquidateLoan(address debtor) external {
 		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
 		// 1Inch liquidation event here
-		int16 creditScore = s_loans[debtor].creditScore;
-		s_loans[debtor].creditScore = creditScore-SCORE_STEP; // Decrease credit score
+		int16 creditScore = s_creditScore[debtor];
+		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
 		// Delete the escrow wallet +withdraw all the capital back here
-
 		emit Liquidation(debtor);
 	}
 

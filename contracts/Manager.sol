@@ -131,25 +131,25 @@ contract Manager {
 
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
-	function estimateLoan(uint256 loanAmount) public returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) {
+	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		creditScore = s_creditScore[msg.sender];
 
 		if(creditScore >= 90) { // The best terms for a loan
 			initialCollateralPercentage = 10;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice()); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 10% of the @param loanAmount 
 			interestRate = 274; // % per day (10% per year)
 		} else if(creditScore < 90 && creditScore >= 60) {
 			initialCollateralPercentage = 30;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice());  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price)));  /// Get price of ETH to USDC, get 30% of the @param loanAmount 
 			interestRate = 548; // % per day (20% per year)
 		} else if(creditScore < 60 && creditScore >= 30) { 
 			initialCollateralPercentage = 60;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice()); /// Get price of ETH to USDC, get 60% of the @param loanAmount
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 60% of the @param loanAmount
 			interestRate = 822; // % per day (30% per year)
 		} else { // The worst terms for a loan
 			initialCollateralPercentage = 80;
-			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/getETHtoUSCDPrice()); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
+			collateralAmount = (loanAmount * initialCollateralPercentage/100)*(1/uint(int(getETHtoUSCDPrice().price))); /// Get price of ETH to USDC, get 80% of the @param loanAmount 
 			interestRate = 1370; // % per day (50% per year)
 		}
 	}
@@ -197,17 +197,24 @@ contract Manager {
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(address debtor) public returns(bool liquidate) { // For chainlink automation
-		if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
-			liquidate = false;
-		} else {
-			liquidate = true;
+	function checkLiquidate(bytes calldata /* checkData */) public view returns(bool liquidate, bytes memory performData) { // For chainlink automation
+		for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each debtor
+        	address debtor = s_loanAddresses[i];
+			if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
+				liquidate = false;
+			} else {
+				liquidate = true;
+				performData = abi.encode(debtor);
+			}
 		}
 	}
 
-	function liquidateLoan(address debtor) external {
-		if(!checkLiquidate(debtor)) revert("The loan can't be liquidated.");
-		// 1Inch liquidation event here
+	function liquidateLoan(bytes calldata checkData) external {
+		(bool liquidate, ) = checkLiquidate(checkData);
+		if(!liquidate) revert("The loan can't be liquidated.");
+		// Uniswap liquidation event here, swap collateral ETH for USDC
+		address debtor;
+    	(debtor) = abi.decode(checkData, (address));
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
 		// Delete the escrow wallet +withdraw all the capital back here
@@ -243,14 +250,14 @@ contract Manager {
         delete s_loanIndexes[debtor];
 	}
 
-	function getETHtoUSCDPrice() public payable returns(uint64) {
+	function getETHtoUSCDPrice() public view returns(PythStructs.Price memory) {
 		bytes32 priceFeedId = 0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace; // ETH/USD
-		PythStructs.Price memory price = pyth.getPrice(priceFeedId);
-		return uint64(price.price);
+		PythStructs.Price memory price = pyth.getPriceUnsafe(priceFeedId);
+		return price;
 	}
 
-	function getHealthRatio(address debtor) public returns(uint256 health){
+	function getHealthRatio(address debtor) public view returns(uint256 health){
 		if(s_loans[debtor].debtAmount == 0) revert("This loan doesn't exist.");
-		health = ((s_loans[debtor].collateralAmount*getETHtoUSCDPrice()) / s_loans[debtor].debtAmount)*100;
+		health = ((s_loans[debtor].collateralAmount*uint(int(getETHtoUSCDPrice().price))) / s_loans[debtor].debtAmount)*100;
 	}
 }

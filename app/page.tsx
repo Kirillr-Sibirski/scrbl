@@ -18,6 +18,9 @@ export default function Home() {
         abi,
         address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
         functionName: "getVerifiedWallet",
+        args: [
+            account.address!,
+        ]
     });
     // const { isLoading: fetchIsLoading, isSuccess: fetchIsLoaded } = useWaitForTransactionReceipt({ hash: fetchHash })
     
@@ -31,7 +34,7 @@ export default function Home() {
                 address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
                 account: account.address!,
                 abi,
-                functionName: "verifyWallet",
+                functionName: "verifyAndExecute",
                 args: [
                     account.address!,
                     BigInt(proof!.merkle_root),

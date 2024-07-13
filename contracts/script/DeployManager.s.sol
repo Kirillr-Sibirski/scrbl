@@ -19,7 +19,7 @@ import { IPyth } from "pyth-sdk-solidity/IPyth.sol";
 //             address(0x0708325268dF9F66270F1401206434524814508b)
 //         );
 
-        console.log("Oracle:", uint(int(manager.getETHtoUSCDPrice().price)));
+        // console.log("Oracle:", uint(int(manager.getETHtoUSCDPrice().price)));
         // manager.verifyWallet();
 
 //         (uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) = manager.estimateLoan(100);

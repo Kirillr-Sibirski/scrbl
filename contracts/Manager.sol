@@ -47,6 +47,8 @@ contract Manager {
 	/// @dev Normal wallet to WorldID (here are the wallets that have been verified with the World ID)
 	mapping(address => uint256) internal s_verifiedWallet;
 
+	mapping(uint256 => bool) internal nullifierHashes;
+
 	/// @dev Credit scores are stored here /100
 	mapping(address => int16) internal s_creditScore;
 
@@ -67,6 +69,8 @@ contract Manager {
 	event ExistingLoanVerify(int16, bool, uint256, uint256, int16);
 	event NonExistingLoanVerify(int16, bool, uint256, uint256, int16);
 
+	event Verified(uint256 nullifierHash);
+
 	/// @param _worldId The WorldID router that will verify the proofs
 	/// @param _appId The World ID app ID
 	/// @param _actionId The World ID action ID
@@ -75,6 +79,29 @@ contract Manager {
 		worldId = _worldId;
 		externalNullifier = abi.encodePacked(abi.encodePacked(_appId).hashToField(), _actionId).hashToField();
 		pyth = IPyth(_pythContract);
+	}
+
+	function verifyAndExecute(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
+		// First, we make sure this person hasn't done this before
+		if (nullifierHashes[nullifierHash]) revert DuplicateNullifier(nullifierHash);
+
+		// We now verify the provided proof is valid and the user is verified by World ID
+		worldId.verifyProof(
+			root,
+			groupId,
+			abi.encodePacked(signal).hashToField(),
+			nullifierHash,
+			externalNullifier,
+			proof
+		);
+
+		// We now record the user has done this, so they can't do it again (proof of uniqueness)
+		nullifierHashes[nullifierHash] = true;
+
+		// Finally, execute your logic here, for example issue a token, NFT, etc...
+		// Make sure to emit some kind of event afterwards!
+
+		emit Verified(nullifierHash);
 	}
 
 	/// @param signal An arbitrary input from the user, usually the user's wallet address (check README for further details)

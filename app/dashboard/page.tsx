@@ -22,6 +22,9 @@ export default function Dashboard() {
         abi,
         address,
         functionName: "getVerifiedWallet",
+        args: [
+            account.address!,
+        ]
     });
     // const { isLoading: fetchIsLoading, isSuccess: fetchIsLoaded } = useWaitForTransactionReceipt({ hash: fetchHash })
     

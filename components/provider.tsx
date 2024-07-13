@@ -15,13 +15,13 @@ export const chain: Chain = {
     rpcUrls: {
         default: { http: ["http://127.0.0.1:8545/"] },
     },
-    testnet: false,
+    testnet: true,
 }
 const config = getDefaultConfig({
     appName: "SCRBL",
     projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID!,
     chains: [chain],
-    ssr: true,
+    ssr: false,
 })
 const queryClient = new QueryClient()
 

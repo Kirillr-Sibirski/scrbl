@@ -1,10 +1,10 @@
 // // SPDX-License-Identifier: MIT
 // pragma solidity ^0.8.13;
 
-// import { Script, console } from "forge-std/Script.sol";
-// import { Manager } from "../Manager.sol";
-// import { IWorldID } from "../interfaces/IWorldID.sol";
-// import { IPyth } from "pyth-sdk-solidity/IPyth.sol";
+import { Script, console } from "forge-std/Script.sol";
+import { Manager } from "../Manager.sol";
+import { IWorldID } from "../interfaces/IWorldID.sol";
+import { IPyth } from "pyth-sdk-solidity/IPyth.sol";
 
 // contract DeployManager is Script {
 //     function run() external {
@@ -19,8 +19,8 @@
 //             address(0x0708325268dF9F66270F1401206434524814508b)
 //         );
 
-//         console.log("Oracle:", uint(int(manager.getETHtoUSCDPrice().price)));
-//         manager.verifyWallet();
+        console.log("Oracle:", uint(int(manager.getETHtoUSCDPrice().price)));
+        // manager.verifyWallet();
 
 //         (uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) = manager.estimateLoan(100);
 

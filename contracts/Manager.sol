@@ -83,7 +83,7 @@ contract Manager {
 	/// @param proof The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
 	/// @dev Here we verify that the ETH wallet they have connected corresponds to a real person using WorldID.
 	function verifyWallet(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
-		if(s_verifiedWallet[msg.sender] == 0) {
+		if(s_verifiedWallet[signal] == 0) {
 			// We now verify the provided proof is valid and the user is verified by World ID
 			worldId.verifyProof(
 				root,
@@ -94,27 +94,27 @@ contract Manager {
 				proof
 			);
 
-			s_verifiedWallet[msg.sender] = nullifierHash;
-			s_creditScore[msg.sender] = DEFAULT_CREDIT_SCORE;
+			s_verifiedWallet[signal] = nullifierHash;
+			s_creditScore[signal] = DEFAULT_CREDIT_SCORE;
 
-			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
-		} else if(s_loans[msg.sender].debtAmount > 0) {
-			emit ExistingLoanVerify(s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
-			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+			emit NonExistingLoanVerify(s_creditScore[signal], false, 0, 0, 0);
+			return (s_creditScore[signal], false, 0, 0, 0);
+		} else if(s_loans[signal].debtAmount > 0) {
+			emit ExistingLoanVerify(s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);
+			return (s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);
 		} else {
-			emit NonExistingLoanVerify(s_creditScore[msg.sender], false, 0, 0, 0);
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
+			emit NonExistingLoanVerify(s_creditScore[signal], false, 0, 0, 0);
+			return (s_creditScore[signal], false, 0, 0, 0);
 		}
 	}
 
-	function getVerifiedWallet() public returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
-		if(s_verifiedWallet[msg.sender] == 0) {
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
-		} else if(s_loans[msg.sender].debtAmount > 0) {
-			return (s_creditScore[msg.sender], true, s_loans[msg.sender].debtAmount, s_loans[msg.sender].collateralAmount, s_loans[msg.sender].interestRate);
+	function getVerifiedWallet(address signal) public view returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
+		if(s_verifiedWallet[signal] == 0) {
+			return (s_creditScore[signal], false, 0, 0, 0);
+		} else if(s_loans[signal].debtAmount > 0) {
+			return (s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);
 		} else {
-			return (s_creditScore[msg.sender], false, 0, 0, 0);
+			return (s_creditScore[signal], false, 0, 0, 0);
 		}
 	}
 

@@ -46,8 +46,6 @@ export default function Dashboard() {
                     )[0],
                 ],
             })
-
-
         } catch (error) {
             console.error(error)
         }

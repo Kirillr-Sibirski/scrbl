@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { WagmiProvider } from "wagmi"
 
 export const chain: Chain = {
-    id: 11155420,
+    id: 10,
     name: "Optimism Sepolia Anvil Fork",
     nativeCurrency: {
         decimals: 18,
@@ -15,7 +15,7 @@ export const chain: Chain = {
     rpcUrls: {
         default: { http: ["http://127.0.0.1:8545/"] },
     },
-    testnet: true,
+    testnet: false,
 }
 const config = getDefaultConfig({
     appName: "SCRBL",

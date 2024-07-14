@@ -2,7 +2,6 @@
 pragma solidity >=0.8.12;
 pragma abicoder v2;
 
-import { ISwapRouter02 } from "swap-router-contracts/interfaces/ISwapRouter02.sol";
 import { ISwapRouter } from "v3-periphery/interfaces/ISwapRouter.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
@@ -20,6 +19,10 @@ interface CErc20 {
     function redeem(uint) external returns (uint);
 
     function redeemUnderlying(uint) external returns (uint);
+}
+
+interface ISwapRouter02 {
+    function exactInputSingle(ISwapRouter.ExactInputSingleParams memory) external payable returns (uint256);
 }
 
 contract EscrowFacade {

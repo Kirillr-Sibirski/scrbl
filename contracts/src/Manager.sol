@@ -111,7 +111,7 @@ contract Manager {
 	}
 
 	function getVerifiedWallet(address signal) public view returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
-		if(s_verifiedWallet[signal] == 0) {
+		if(s_verifiedWallet[signal] == uint256(0)) {
 			return (s_creditScore[signal], false, 0, 0, 0);
 		} else if(s_loans[signal].debtAmount > 0) {
 			return (s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);
@@ -143,9 +143,9 @@ contract Manager {
 
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
-	function estimateLoan(uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) {
-		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
-		creditScore = s_creditScore[msg.sender];
+	function estimateLoan(address signer, uint256 loanAmount) public view returns(uint256 collateralAmount, int16 interestRate, int16 creditScore, uint256 initialCollateralPercentage) {
+		if(s_verifiedWallet[signer] == uint256(0)) revert("Wallet not verified with WorldID.");
+		creditScore = s_creditScore[signer];
 
 		if(creditScore >= 90) { // The best terms for a loan
 			initialCollateralPercentage = 10;
@@ -169,8 +169,8 @@ contract Manager {
 	/// @dev Estimate the loan before taking it
 	/// @param loanAmount How much loan the user wants to take out (in USDC)
 	function depositCollateralAndCreateEscrow(uint256 loanAmount) external payable {
-		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
-		(uint256 collateralAmount, int16 interestRate, , uint256 initialCollateralPercentage) = estimateLoan(loanAmount);
+		if(s_verifiedWallet[msg.sender] == uint256(0)) revert("Wallet not verified with WorldID.");
+		(uint256 collateralAmount, int16 interestRate, , uint256 initialCollateralPercentage) = estimateLoan(msg.sender, loanAmount);
 		if(msg.value != collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
 		address escrowWallet = address(0); // Actual address here

@@ -16,7 +16,7 @@ import abi from '@/abi/ContractAbi.json'
 export default function Home() {
 	const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`
 	const account = useAccount()
-	
+
 	/* --------------- Verification --------------- */
 	const { setOpen } = useIDKit()
 	const [verified, setVerified] = useState(false)
@@ -50,7 +50,7 @@ export default function Home() {
 
 			console.log("tx verifyWallet()", tx)
 			// setDone(true)
-		} catch (error) {console.log((error as BaseError).shortMessage)}
+		} catch (error) { console.log((error as BaseError).shortMessage) }
 	}
 
 	/* --------------- Estimate Loan -------------- */
@@ -58,18 +58,18 @@ export default function Home() {
 	const handleEstimateChange = (event: any) => {
 		setEstimateAmount(event.target.value) // Update state with the current input value
 	};
-	
+
 	const estimateLoan = async (e: any) => {
 		e.preventDefault()
 		try {
 			const data = await publicClient.readContract({
 				address, abi,
 				functionName: 'estimateLoan',
-				args: [estimateAmount],
+				args: [account.address!, estimateAmount],
 			})
 
 			console.log("Estimate Loan:", data)
-		} catch (error) {console.log((error as BaseError).shortMessage)}
+		} catch (error) { console.log((error as BaseError).shortMessage) }
 	}
 
 	/* ----------------- Get Loan ----------------- */
@@ -107,14 +107,51 @@ export default function Home() {
 				args: [desiredLoanAmount]
 			})
 			console.log("tx depositCollateralAndCreateEscrow():", tx)
-		} catch (error) {console.log((error as BaseError).shortMessage)}
+		} catch (error) { console.log((error as BaseError).shortMessage) }
+	}
+
+	/* ----------------- Repay Loan ----------------- */
+	const [repayAmount, setRepayAmount] = useState(0)
+	const handleRepayChange = (event: any) => {
+		setRepayAmount(event.target.value)
+	};
+
+	const repayLoan = async (e: any) => {
+		e.preventDefault()
+		try {
+			let a = await writeContractAsync({
+				address,
+				account: account.address!,
+				abi,
+				functionName: 'repayWithoutCollateralWithdrawal',
+				args: [
+					repayAmount
+				],
+			})
+
+			console.log("Repay Loan:", a)
+		} catch (error) { console.log((error as BaseError).shortMessage) }
+	}
+
+	/* ----------------- Full Loan Repay ----------------- */
+	const repayFull = async (e: any) => {
+		e.preventDefault()
+		try {
+			let a = await writeContractAsync({
+				address,
+				account: account.address!,
+				abi,
+				functionName: 'repayFull',
+			})
+			console.log("Full loan repay:", a)
+		} catch (error) { console.log((error as BaseError).shortMessage) }
 	}
 
 	/* ---------------- Components ---------------- */
 	return (
 		<div className="h-screen container pt-6 px-6 flex flex-col gap-8">
 			<div className="px-6 py-4 overflow-scroll bg-zinc-800 rounded-lg">
-				<ConnectKitButton/>
+				<ConnectKitButton />
 
 				{account.isConnected && (<>
 					<IDKitWidget
@@ -153,6 +190,23 @@ export default function Home() {
 					placeholder="Desired loan amount"
 				/>
 				<button onClick={getLoan} disabled={loanIsConfirming || loanIsConfirmed || hasLoan} className="disabled:text-red-950">Get Loan</button>
+			</div>
+
+			{/* repayWithoutCollateralWithdrawal */}
+			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
+				<input
+					id="inputField"
+					type="text"
+					value={repayAmount}
+					onChange={handleRepayChange}
+					placeholder="Improve the health ratio"
+				/>
+				<button onClick={repayLoan}>Repay Loan</button>
+			</div>
+
+			{/* repayFull */}
+			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
+				<button onClick={repayFull}>Fully repay the debts</button>
 			</div>
 		</div>
 	)

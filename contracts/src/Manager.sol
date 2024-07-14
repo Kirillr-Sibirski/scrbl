@@ -258,7 +258,7 @@ contract Manager {
 		Loan memory loan = s_loans[debtor];
 		IMulticall3 multicall = IMulticall3(0xcA11bde05977b3631167028862bE2a173976CA11);
 		multicall.aggregate3(calls);
-		uint256 liquidationThreshold = loan.debtAmount / 10000;
+		uint256 liquidationThreshold = loan.debtAmount * 1000 / 10000;
 		if(usdcToken.balanceOf(loan.escrowWallet) > (loan.debtAmount + liquidationThreshold)) revert("this escrow wallet still has enough usdc to stay above liquidation");
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score

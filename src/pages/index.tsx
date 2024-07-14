@@ -15,6 +15,9 @@ export default function Home() {
 	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, }) 
 	const [loanAmount, setLoanAmount] = useState(0);
 
+	// Get Loan
+	
+
 	const submitTx = async (proof: ISuccessResult) => {
 		try {
 			console.log("nullifier_hash", BigInt(proof!.nullifier_hash))
@@ -93,7 +96,7 @@ export default function Home() {
 					{error && <p>Error: {(error as BaseError).message}</p>}
 				</>)}
 			</div>
-			<div className="px-6 py-4 flex flex-col items-start bg-zinc-800 rounded-lg">
+			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
 				<input
 					id="inputField"
 					type="text"
@@ -103,6 +106,16 @@ export default function Home() {
 				/>
 				<button onClick={estimateLoan}>Estimate Loan</button>
 				{/* {estimatedDetails && <p>{estimatedDetails}</p>} */}
+			</div>
+			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
+				<input
+					id="inputField"
+					type="text"
+					value={loanAmount}
+					onChange={handleChange}
+					placeholder="Desired loan amount"
+				/>
+				<button onClick={estimateLoan}>Estimate Loan</button>
 			</div>
 		</div>
 	)

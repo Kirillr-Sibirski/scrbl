@@ -3,7 +3,7 @@
 import abi from '@/abi/ContractAbi.json'
 import { ConnectKitButton } from 'connectkit'
 import { IDKitWidget, ISuccessResult, useIDKit } from '@worldcoin/idkit'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, type BaseError } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, type BaseError } from 'wagmi'
 import { decodeAbiParameters, parseAbiParameters } from 'viem'
 import { useState } from 'react'
 
@@ -43,31 +43,25 @@ export default function Home() {
 				],
 			})
 
-			// let a = await writeContractAsync({
-			// 	address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-			// 	account: account.address!,
-			// 	abi,
-			// 	functionName: 'getShit',
-			// 	args: []
-			// })
-
 			console.log("tx completed", a)
 			// setDone(true)
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
 
-	const estimateLoan = async () => {
+	const estimateLoan = () => {
 		console.log("Loan amount: ",loanAmount);
-		let a = await writeContractAsync({
-			address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-			account: account.address!,
-			abi,
-			functionName: 'estimateLoan',
-			args: [
-				loanAmount
-			]
-		});
-		console.log("Transaction output: ",a);
+		try {
+			const output = useReadContract({
+				address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+				account: account.address!,
+				abi,
+				functionName: 'estimateLoan',
+				args: [loanAmount],
+			});
+			console.log("Transaction output: ", {output});
+		} catch(err) {
+			console.error(err);
+		}
 	}
 
 	const handleChange = (event: any) => {

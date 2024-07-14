@@ -30,7 +30,7 @@ contract EscrowFacade {
     ISwapRouter public immutable swapRouter = ISwapRouter(swapRouterAddr);
 
     address public constant WETH = 0xf531B8F309Be94191af87605CfBf600D71C2cFe0; //base sepolia address
-    address public constant USDC = 0x5dEaC602762362FE5f135FA5904351916053cF70; //eth sepolia address
+    address public constant USDC = 0x5dEaC602762362FE5f135FA5904351916053cF70; //base sepolia address
     address public constant cUSDCv3 = 0x571621Ce60Cebb0c1D442B5afb38B1663C6Bf017; //Base sepolia address for compound usdc pool
     address public constant cWETHv3 = 0x61490650AbaA31393464C3f34E8B29cd1C44118E; // Base sepolia address for compound WETH pool
 

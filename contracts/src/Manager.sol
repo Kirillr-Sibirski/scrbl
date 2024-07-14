@@ -28,7 +28,7 @@ contract Manager {
 	}
 
 	address public immutable facadeContractAddr;
-	address public usdcTokenAddress = 0x036CbD53842c5426634e7929541eC2318f3dCF7e; // Base Sepolia USDC address
+	address public immutable usdcTokenAddress = 0x5dEaC602762362FE5f135FA5904351916053cF70; // Base Sepolia USDC address
     IERC20 usdcToken = IERC20(usdcTokenAddress);
 
 	///////////////////////////////////////////////////////////////////////////////

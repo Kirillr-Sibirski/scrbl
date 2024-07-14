@@ -3,6 +3,7 @@ pragma solidity >=0.8.12;
 pragma abicoder v2;
 
 import { ISwapRouter02 } from "swap-router-contracts/interfaces/ISwapRouter02.sol";
+import { ISwapRouter } from "v3-periphery/interfaces/ISwapRouter.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
@@ -55,7 +56,7 @@ contract EscrowFacade {
         bool approved = abi.decode(result, (bool));
         if (approved == false) revert("unable to approve transfer for token0 in escrow wallet");
 
-        ISwapRouter02.ExactInputSingleParams memory params = ISwapRouter02
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
             .ExactInputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,

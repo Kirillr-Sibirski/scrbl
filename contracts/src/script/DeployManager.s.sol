@@ -1,10 +1,10 @@
 // // SPDX-License-Identifier: MIT
-// pragma solidity ^0.8.13;
+pragma solidity ^0.8.13;
 
-import { Script, console } from "forge-std/Script.sol";
-import { Manager } from "../Manager.sol";
-import { IWorldID } from "../interfaces/IWorldID.sol";
-import { IPyth } from "pyth-sdk-solidity/IPyth.sol";
+// import { Script, console } from "forge-std/Script.sol";
+// import { Manager } from "../Manager.sol";
+// import { IWorldID } from "../interfaces/IWorldID.sol";
+// import { IPyth } from "pyth-sdk-solidity/IPyth.sol";
 
 // contract DeployManager is Script {
 //     function run() external {

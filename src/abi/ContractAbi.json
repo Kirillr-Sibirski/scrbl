@@ -95,6 +95,11 @@
     "name": "estimateLoan",
     "inputs": [
       {
+        "name": "signer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "loanAmount",
         "type": "uint256",
         "internalType": "uint256"

@@ -65,7 +65,7 @@ export default function Home() {
 			const data = await publicClient.readContract({
 				address, abi,
 				functionName: 'estimateLoan',
-				args: [estimateAmount],
+				args: [account.address!, estimateAmount],
 			})
 
 			console.log("Estimate Loan:", data)

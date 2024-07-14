@@ -1,24 +1,29 @@
 "use client"
-
-import abi from '@/abi/ContractAbi.json'
-import { ConnectKitButton } from 'connectkit'
-import { IDKitWidget, ISuccessResult, useIDKit } from '@worldcoin/idkit'
+/* ------------------ Imports ----------------- */
+// Web3
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, type BaseError } from 'wagmi'
+import { IDKitWidget, ISuccessResult, useIDKit } from '@worldcoin/idkit'
 import { decodeAbiParameters, parseAbiParameters } from 'viem'
+import { ConnectKitButton } from 'connectkit'
+// Next.js
 import { useState } from 'react'
+// Other
+import { publicClient } from '@/lib/client'
+import abi from '@/abi/ContractAbi.json'
 
+
+/* ----------------- Component ---------------- */
 export default function Home() {
+	const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`
 	const account = useAccount()
+	
+	/* --------------- Verification --------------- */
 	const { setOpen } = useIDKit()
 	const [done, setDone] = useState(false)
 	const { data: hash, isPending, error, writeContractAsync } = useWriteContract()
 	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, }) 
-	const [loanAmount, setLoanAmount] = useState(0);
-
-	// Get Loan
 	
-
-	const submitTx = async (proof: ISuccessResult) => {
+	const txVerifyWallet = async (proof: ISuccessResult) => {
 		try {
 			console.log("nullifier_hash", BigInt(proof!.nullifier_hash))
 			console.log("proof", decodeAbiParameters(
@@ -28,7 +33,7 @@ export default function Home() {
 			console.log("merkle_root", BigInt(proof!.merkle_root))
 
 			let a = await writeContractAsync({
-				address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+				address,
 				account: account.address!,
 				abi,
 				functionName: 'verifyWallet',
@@ -48,26 +53,43 @@ export default function Home() {
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
 
-	const estimateLoan = () => {
-		console.log("Loan amount: ",loanAmount);
-		try {
-			const output = useReadContract({
-				address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-				account: account.address!,
-				abi,
-				functionName: 'estimateLoan',
-				args: [loanAmount],
-			});
-			console.log("Transaction output: ", {output});
-		} catch(err) {
-			console.error(err);
-		}
-	}
-
+	/* --------------- Estimate Loan -------------- */
+	const [estimateAmount, setEstimateAmount] = useState(0);
 	const handleChange = (event: any) => {
-		setLoanAmount(event.target.value); // Update state with the current input value
+		setEstimateAmount(event.target.value); // Update state with the current input value
 	};
+	
+	const estimateLoan = async (e: any) => {
+		try {
+			e.preventDefault()
+			
+			const data = await publicClient.readContract({
+				address, abi,
+				functionName: 'estimateLoan',
+				args: [estimateAmount],
+			})
 
+			console.log("Estimate Loan:", data)
+		} catch (error) {console.log((error as BaseError).shortMessage)}
+	}
+	
+	// const estimateLoan = () => {
+	// 	console.log("Loan amount: ",estimateAmount);
+	// 	try {
+	// 		const output = useReadContract({
+	// 			address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+	// 			account: account.address!,
+	// 			abi,
+	// 			functionName: 'estimateLoan',
+	// 			args: [estimateAmount],
+	// 		});
+	// 		console.log("Transaction output: ", {output});
+	// 	} catch(err) {
+	// 		console.error(err);
+	// 	}
+	// }
+
+	/* ---------------- Components ---------------- */
 	return (
 		<div className="h-screen container pt-6 px-6 flex flex-col gap-8">
 			<div className="px-6 py-4 overflow-scroll bg-zinc-800 rounded-lg">
@@ -78,7 +100,7 @@ export default function Home() {
 						app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
 						action={process.env.NEXT_PUBLIC_ACTION as string}
 						signal={account.address}
-						onSuccess={submitTx}
+						onSuccess={txVerifyWallet}
 						autoClose
 					/>
 
@@ -94,7 +116,7 @@ export default function Home() {
 				<input
 					id="inputField"
 					type="text"
-					value={loanAmount}
+					value={estimateAmount}
 					onChange={handleChange}
 					placeholder="Desired loan amount"
 				/>
@@ -105,7 +127,7 @@ export default function Home() {
 				<input
 					id="inputField"
 					type="text"
-					value={loanAmount}
+					value={estimateAmount}
 					onChange={handleChange}
 					placeholder="Desired loan amount"
 				/>

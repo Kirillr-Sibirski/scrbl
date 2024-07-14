@@ -20,7 +20,7 @@ In another shell, deploy the contract, replacing `$WORLD_ID_ROUTER` with the [Wo
 
 ```bash
 cd contracts
-forge create --rpc-url https://base-sepolia.g.alchemy.com/v2/$YOUR_API_KEY --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 src/Manager.sol:Manager --constructor-args $WORLD_ID_ROUTER $NEXT_PUBLIC_APP_ID $NEXT_PUBLIC_ACTION $PYTH_ROUTER
+forge create --rpc-url https://base-sepolia.g.alchemy.com/v2/$YOUR_API_KEY --private-key {private key} src/Manager.sol:Manager --constructor-args $WORLD_ID_ROUTER $NEXT_PUBLIC_APP_ID $NEXT_PUBLIC_ACTION $PYTH_ROUTER
 ```
 
 Note the `Deployed to:` address from the output.

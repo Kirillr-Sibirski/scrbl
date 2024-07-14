@@ -26,13 +26,13 @@ contract EscrowFacade {
     using Address for address;
 
     Manager public immutable escrowManager;
-    address public immutable swapRouterAddr = 0xE592427A0AEce92De3Edee1F18E0157C05861564; //optimism mainnet and eth sepolia address 
+    address public immutable swapRouterAddr = 0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4; //Base sepolia SwapRouter02 contract address 
     ISwapRouter public immutable swapRouter = ISwapRouter(swapRouterAddr);
 
-    address public constant WETH = 0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; //eth sepolia address
-    address public constant USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238; //eth sepolia address
-    address public constant cUSDCv3 = 0xAec1F48e02Cfb822Be958B68C7957156EB3F0b6e; //eth sepolia address for compound usdc pool
-    address public constant cWETHv3 = 0x2943ac1216979aD8dB76D9147F64E61adc126e96; // eth sepolia address
+    address public constant WETH = 0xf531B8F309Be94191af87605CfBf600D71C2cFe0; //base sepolia address
+    address public constant USDC = 0x5dEaC602762362FE5f135FA5904351916053cF70; //eth sepolia address
+    address public constant cUSDCv3 = 0x571621Ce60Cebb0c1D442B5afb38B1663C6Bf017; //Base sepolia address for compound usdc pool
+    address public constant cWETHv3 = 0x61490650AbaA31393464C3f34E8B29cd1C44118E; // Base sepolia address for compound WETH pool
 
     //hard code 0.1% fee since these are a stable/popular pair
     uint24 public constant poolFee = 1000;
@@ -99,9 +99,9 @@ contract EscrowFacade {
         //Manager.Loan memory loan = escrowManager.GetLoanDetailsByAddress(msg.sender);
         IERC20 underlying;
         CErc20 cToken = CErc20(_cToken);
-        if (_cToken == address(0xAec1F48e02Cfb822Be958B68C7957156EB3F0b6e)) {
+        if (_cToken == cUSDCv3) {
             underlying = IERC20(USDC);
-        } else if(_cToken == address(0x2943ac1216979aD8dB76D9147F64E61adc126e96)) {
+        } else if(_cToken == cWETHv3) {
             underlying = IERC20(WETH);
         }
 

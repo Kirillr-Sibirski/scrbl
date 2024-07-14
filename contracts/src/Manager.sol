@@ -111,7 +111,7 @@ contract Manager {
 	}
 
 	function getVerifiedWallet(address signal) public view returns(int16 score, bool loan, uint256 debt, uint256 collateral, int16 interest) {
-		if(s_verifiedWallet[signal] == 0) {
+		if(s_verifiedWallet[signal] == uint256(0)) {
 			return (s_creditScore[signal], false, 0, 0, 0);
 		} else if(s_loans[signal].debtAmount > 0) {
 			return (s_creditScore[signal], true, s_loans[signal].debtAmount, s_loans[signal].collateralAmount, s_loans[signal].interestRate);

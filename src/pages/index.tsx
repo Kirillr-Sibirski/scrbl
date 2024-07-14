@@ -54,15 +54,14 @@ export default function Home() {
 	}
 
 	/* --------------- Estimate Loan -------------- */
-	const [estimateAmount, setEstimateAmount] = useState(0);
-	const handleChange = (event: any) => {
-		setEstimateAmount(event.target.value); // Update state with the current input value
+	const [estimateAmount, setEstimateAmount] = useState(0)
+	const handleEstimateChange = (event: any) => {
+		setEstimateAmount(event.target.value) // Update state with the current input value
 	};
 	
 	const estimateLoan = async (e: any) => {
+		e.preventDefault()
 		try {
-			e.preventDefault()
-			
 			const data = await publicClient.readContract({
 				address, abi,
 				functionName: 'estimateLoan',
@@ -88,6 +87,25 @@ export default function Home() {
 	// 		console.error(err);
 	// 	}
 	// }
+
+	/* ----------------- Get Loan ----------------- */
+	const [loanAmount, setLoanAmount] = useState(0)
+	const handleLoanChange = (event: any) => {
+		setLoanAmount(event.target.value)
+	};
+
+	const getLoan = async (e: any) => {
+		e.preventDefault()
+		try {
+			const data = await publicClient.readContract({
+				address, abi,
+				functionName: 'depositCollateralAndCreateEscrow',
+				args: [account.address!, loanAmount],
+			})
+
+			console.log("Estimate Loan:", data)
+		} catch (error) {console.log((error as BaseError).shortMessage)}
+	}
 
 	/* ---------------- Components ---------------- */
 	return (
@@ -117,7 +135,7 @@ export default function Home() {
 					id="inputField"
 					type="text"
 					value={estimateAmount}
-					onChange={handleChange}
+					onChange={handleEstimateChange}
 					placeholder="Desired loan amount"
 				/>
 				<button onClick={estimateLoan}>Estimate Loan</button>
@@ -127,11 +145,11 @@ export default function Home() {
 				<input
 					id="inputField"
 					type="text"
-					value={estimateAmount}
-					onChange={handleChange}
+					value={loanAmount}
+					onChange={handleLoanChange}
 					placeholder="Desired loan amount"
 				/>
-				<button onClick={estimateLoan}>Estimate Loan</button>
+				<button onClick={getLoan}>Get Loan</button>
 			</div>
 		</div>
 	)

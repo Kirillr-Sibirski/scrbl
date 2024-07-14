@@ -40,14 +40,6 @@ export default function Home() {
 				],
 			})
 
-			// let a = await writeContractAsync({
-			// 	address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-			// 	account: account.address!,
-			// 	abi,
-			// 	functionName: 'getShit',
-			// 	args: []
-			// })
-
 			console.log("tx completed", a)
 			// setDone(true)
 		} catch (error) {console.log((error as BaseError).shortMessage)}
@@ -55,14 +47,13 @@ export default function Home() {
 
 	const estimateLoan = () => {
 		console.log("Loan amount: ",loanAmount);
-		const number = loanAmount;
 		try {
 			const output = useReadContract({
 				address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
 				account: account.address!,
 				abi,
 				functionName: 'estimateLoan',
-				args: [number],
+				args: [loanAmount],
 			});
 			console.log("Transaction output: ", {output});
 		} catch(err) {

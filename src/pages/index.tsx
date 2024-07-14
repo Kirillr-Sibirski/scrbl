@@ -100,10 +100,33 @@ export default function Home() {
 			const data = await publicClient.readContract({
 				address, abi,
 				functionName: 'depositCollateralAndCreateEscrow',
-				args: [account.address!, loanAmount],
+				args: [loanAmount],
 			})
 
-			console.log("Estimate Loan:", data)
+			console.log("Get Loan:", data)
+		} catch (error) {console.log((error as BaseError).shortMessage)}
+	}
+
+	/* ----------------- Repay Loan ----------------- */
+	const [repayAmount, setRepayAmount] = useState(0)
+	const handleRepayChange = (event: any) => {
+		setRepayAmount(event.target.value)
+	};
+
+	const repayLoan = async (e: any) => {
+		e.preventDefault()
+		try {
+			let a = await writeContractAsync({
+				address,
+				account: account.address!,
+				abi,
+				functionName: 'repayWithoutCollateralWithdrawal',
+				args: [
+					repayAmount
+				],
+			})
+
+			console.log("Repay Loan:", a)
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
 
@@ -150,6 +173,18 @@ export default function Home() {
 					placeholder="Desired loan amount"
 				/>
 				<button onClick={getLoan}>Get Loan</button>
+			</div>
+
+			{/* repayWithoutCollateralWithdrawal */}
+			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
+				<input
+					id="inputField"
+					type="text"
+					value={repayAmount}
+					onChange={handleRepayChange}
+					placeholder="Improve the health ratio"
+				/>
+				<button onClick={repayLoan}>Repay Loan</button>
 			</div>
 		</div>
 	)

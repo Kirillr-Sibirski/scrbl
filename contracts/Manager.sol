@@ -4,8 +4,10 @@ pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "pyth-sdk-solidity/IPyth.sol";
 import "pyth-sdk-solidity/PythStructs.sol";
+import { Multicall3 } from "multicall/Multicall3.sol";
 import { ByteHasher } from './helpers/ByteHasher.sol';
 import { IWorldID } from './interfaces/IWorldID.sol';
+import { IEscrowWallet } from './interfaces/IEscrowWallet.sol';
 import { EscrowWallet } from './EscrowWallet.sol';
 import { EscrowFacade } from './EscrowFacade.sol';
 
@@ -60,6 +62,8 @@ contract Manager {
 	/// @dev List of current loans
 	mapping(address => Loan) internal s_loans;
 	mapping(address => uint256) internal s_loanIndexes;
+	// mapping from escrow wallet contract address to debtor wallet address
+	mapping(address => address) internal s_loan_to_debtor;
 	address[] internal s_loanAddresses;
 
 	/// @param nullifierHash The nullifier hash for the verified proof
@@ -210,14 +214,15 @@ contract Manager {
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		if(usdcToken.balanceOf(address(this)) < loanAmount) revert("protocol does not have enough usdc to make this loan");
 		(uint256 collateralAmount, int16 interestRate, , uint256 initialCollateralPercentage) = estimateLoan(loanAmount);
-		if(msg.value < collateralAmount) revert("Wrong collateral amount."); // Check that the right amount of ETH is provided
+		uint256 collateralPassedInDenotedInUSD = (msg.value * (10**18)) / uint(int(getETHtoUSCDPrice().price / (10**8)));
+		if(collateralPassedInDenotedInUSD != collateralAmount) revert("Not enough collateral amount."); // Check that the right amount of ETH is provided
 		// Deploy new wallet and fund with loanAmount in USDC
 		EscrowWallet escrowWallet = new EscrowWallet(address(this), facadeContractAddr); // Actual address here
 		bool successful = usdcToken.transferFrom(address(this), address(escrowWallet), loanAmount);
 		if(!successful) revert("transaction to fund escrow wallet was unsuccessful");
 		Loan memory newLoan = Loan({
             debtAmount: loanAmount,
-            collateralAmount: collateralAmount,
+            collateralAmount: collateralPassedInDenotedInUSD,
             escrowWallet: address(escrowWallet),
             interestRate: interestRate,
 			initialCollateralPercentage: initialCollateralPercentage
@@ -225,6 +230,7 @@ contract Manager {
 		s_loans[msg.sender] = newLoan;
 		s_loanAddresses.push(msg.sender);
 		s_loanIndexes[msg.sender] = s_loanAddresses.length - 1;
+		s_loan_to_debtor[address(escrowWallet)] = msg.sender;
 	}
 
 	/// @dev This function is used to improve the health ratio of user's loan
@@ -238,9 +244,20 @@ contract Manager {
         emit RepayLoan(msg.sender, repayAmount);
 	}
 
+	/// @dev this function is used to pay down a part of the loan to decrease debt amount without fully repaying loan
+	function repayPartial(uint256 amount) external {
+		Loan memory loan = s_loans[msg.sender];
+		if(loan.debtAmount == 0) revert("This loan has no debt to pay back.");
+		if(usdcToken.balanceOf(loan.escrowWallet) < amount) revert("the escrow wallet does not have enough usdc to make this payment");
+		IEscrowWallet wallet = IEscrowWallet(loan.escrowWallet);
+		wallet.safeTransfer(usdcTokenAddress, address(this), amount);
+		loan.debtAmount -= amount;
+		s_loans[msg.sender] = loan;
+	}
+
 	/// @dev This function is used to fully repay and terminate the loan
 	function repayFull() external {
-		if(s_loans[msg.sender].debtAmount == 0) revert("This loan doesn't exist.");
+		if(s_loans[msg.sender].debtAmount == 0) revert("This loan has no debt to pay back.");
 		if(s_verifiedWallet[msg.sender] == 0) revert("Wallet not verified with WorldID.");
 		bool success = usdcToken.transferFrom(msg.sender, address(this), s_loans[msg.sender].debtAmount);
 		if(!success) revert("USDC transfer failed");
@@ -250,27 +267,37 @@ contract Manager {
 		deleteLoan(msg.sender);
 	}
 
-	function checkLiquidate(bytes calldata /* checkData */) public view returns(bool liquidate, bytes memory performData) { // For chainlink automation
-		for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each debtor
-        	address debtor = s_loanAddresses[i];
-			if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
-				liquidate = false;
-			} else {
-				liquidate = true;
-				performData = abi.encode(debtor);
-			}
-		}
-	}
+	// function checkLiquidate(bytes calldata /* checkData */) public view returns(bool liquidate, bytes memory performData) { // For chainlink automation
+	// 	for (uint256 i = 0; i < s_loanAddresses.length; i++) { // Loop through each debtor
+    //     	address debtor = s_loanAddresses[i];
+	// 		if(getHealthRatio(debtor) >= uint(int(s_loans[debtor].initialCollateralPercentage-10))) { // they have 10 percent margin of safety
+	// 			liquidate = false;
+	// 		} else {
+	// 			liquidate = true;
+	// 			performData = abi.encode(debtor);
+	// 		}
+	// 	}
+	// }
 
-	function liquidateLoan(bytes calldata checkData) external {
-		(bool liquidate, ) = checkLiquidate(checkData);
-		if(!liquidate) revert("The loan can't be liquidated.");
+	/// @notice multicall calls should close out all compound positions and swap everything to usdc including collateral
+	function liquidateLoan(Multicall3.Call3[] calldata calls, address escrowWalletToBeLiquidated) external {
+		// (bool liquidate, ) = checkLiquidate(checkData);
+		// if(!liquidate) revert("The loan can't be liquidated.");
 		// Uniswap liquidation event here, swap collateral ETH for USDC
-		address debtor;
-    	(debtor) = abi.decode(checkData, (address));
+		// address debtor;
+    	// (debtor) = abi.decode(checkData, (address));
+		address debtor = s_loan_to_debtor[escrowWalletToBeLiquidated];
+		Loan loan = s_loans[debtor];
+		Multicall3.aggregate3(calls);
+		uint256 liquidationThreshold = loan.loanAmount / 10000;
+		if(usdcToken.balanceOf(loan.escrowWallet) > (loan.debtAmount + liquidationThreshold)) revert("this escrow wallet still has enough usdc to stay above liquidation");
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
-		// Delete the escrow wallet +withdraw all the capital back here
+		EscrowWallet escrow = IEscrowWallet(loan.escrowWallet);
+		uint256 liquidationReward = loan.loanAmount * 200 / 10000;
+		uint256 totalToPayBackToProtocol = loan.loanAmount - liquidationReward;
+		escrow.safeTransfer(usdcTokenAddress, address(this), totalToPayBackToProtocol);
+		escrow.safeTransfer(usdcTokenAddress, msg.sender, liquidationReward);
 		emit Liquidation(debtor);
 	}
 

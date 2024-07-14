@@ -14,6 +14,7 @@ import abi from '@/abi/ContractAbi.json'
 
 /* ----------------- Component ---------------- */
 export default function Home() {
+	// TODO: Move states up here
 	const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`
 	const account = useAccount()
 
@@ -48,9 +49,10 @@ export default function Home() {
 				],
 			})
 
-			console.log("tx verifyWallet()", tx)
-			// setDone(true)
-		} catch (error) { console.log((error as BaseError).shortMessage) }
+			console.log("tx# verifyWallet()", tx)
+
+			setVerified(true)
+		} catch (verifyError) { console.log((verifyError as BaseError).shortMessage) }
 	}
 
 	/* --------------- Estimate Loan -------------- */
@@ -61,6 +63,8 @@ export default function Home() {
 
 	const estimateLoan = async (e: any) => {
 		e.preventDefault()
+		if (hasLoan) { return }
+
 		try {
 			const data = await publicClient.readContract({
 				address, abi,
@@ -80,20 +84,7 @@ export default function Home() {
 	const [desiredLoanAmount, setDesiredLoanAmount] = useState(0)
 	const handleDesiredLoanChange = (event: any) => {
 		setDesiredLoanAmount(event.target.value)
-	};
-
-	// const getLoan = async (e: any) => {
-	// 	e.preventDefault()
-	// 	try {
-	// 		const data = await publicClient.readContract({
-	// 			address, abi,
-	// 			functionName: 'depositCollateralAndCreateEscrow',
-	// 			args: [account.address!, loanAmount],
-	// 		})
-
-	// 		console.log("Estimate Loan:", data)
-	// 	} catch (error) {console.log((error as BaseError).shortMessage)}
-	// }
+	}
 
 	const getLoan = async (e: any) => {
 		e.preventDefault()
@@ -106,50 +97,63 @@ export default function Home() {
 				functionName: "depositCollateralAndCreateEscrow",
 				args: [desiredLoanAmount]
 			})
-			console.log("tx depositCollateralAndCreateEscrow():", tx)
-		} catch (error) { console.log((error as BaseError).shortMessage) }
+			console.log("tx# depositCollateralAndCreateEscrow():", tx)
+		} catch (loanError) { console.log((loanError as BaseError).shortMessage) }
 	}
 
 	/* ----------------- Repay Loan ----------------- */
-	const [repayAmount, setRepayAmount] = useState(0)
-	const handleRepayChange = (event: any) => {
-		setRepayAmount(event.target.value)
+	const { data: partialRepayHash, isPending: partialRepayIsPending, error: partialRepayError, writeContractAsync: partialRepayWriteContractAsync } = useWriteContract()
+	const { isLoading: partialRepayIsConfirming, isSuccess: partialRepayIsConfirmed } = useWaitForTransactionReceipt({ hash: partialRepayHash, }) 
+
+	const [partialRepayAmount, setFullRepayAmount] = useState(0)
+	const handlePartialRepayChange = (event: any) => {
+		setFullRepayAmount(event.target.value)
 	};
 
-	const repayLoan = async (e: any) => {
+	const partialRepay = async (e: any) => {
 		e.preventDefault()
+		if (!hasLoan) { return }
+
 		try {
-			let a = await writeContractAsync({
+			let tx = await partialRepayWriteContractAsync({
 				address,
 				account: account.address!,
 				abi,
 				functionName: 'repayWithoutCollateralWithdrawal',
 				args: [
-					repayAmount
+					partialRepayAmount
 				],
 			})
 
-			console.log("Repay Loan:", a)
-		} catch (error) { console.log((error as BaseError).shortMessage) }
+			console.log("tx# repayWithoutCollateralWithdrawal():", tx)
+		} catch (partialRepayError) { console.log((partialRepayError as BaseError).shortMessage) }
 	}
 
 	/* ----------------- Full Loan Repay ----------------- */
-	const repayFull = async (e: any) => {
+	const { data: fullRepayHash, isPending: fullRepayIsPending, error: fullRepayError, writeContractAsync: fullRepayWriteContractAsync } = useWriteContract()
+	const { isLoading: fullRepayIsConfirming, isSuccess: fullRepayIsConfirmed } = useWaitForTransactionReceipt({ hash: fullRepayHash, }) 
+
+	const fullRepay = async (e: any) => {
 		e.preventDefault()
+		if (!hasLoan) { return }
+		
 		try {
-			let a = await writeContractAsync({
+			let tx = await fullRepayWriteContractAsync({
 				address,
 				account: account.address!,
 				abi,
 				functionName: 'repayFull',
 			})
-			console.log("Full loan repay:", a)
-		} catch (error) { console.log((error as BaseError).shortMessage) }
+			console.log("tx# repayFull()", tx)
+			
+			setHasLoan(false)
+		} catch (fullRepayError) { console.log((fullRepayError as BaseError).shortMessage) }
 	}
 
 	/* ---------------- Components ---------------- */
 	return (
 		<div className="h-screen container pt-6 px-6 flex flex-col gap-8">
+			{/* Wallet & WorldID Integration */}
 			<div className="px-6 py-4 overflow-scroll bg-zinc-800 rounded-lg">
 				<ConnectKitButton />
 
@@ -170,6 +174,8 @@ export default function Home() {
 					{verifyError && <p>Error: {(verifyError as BaseError).message}</p>}
 				</>)}
 			</div>
+
+			{/* Estimate Loan */}
 			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
 				<input
 					id="inputField"
@@ -181,6 +187,8 @@ export default function Home() {
 				<button onClick={estimateLoan}>Estimate Loan</button>
 				{/* {estimatedDetails && <p>{estimatedDetails}</p>} */}
 			</div>
+
+			{/* Get Loan */}
 			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
 				<input
 					id="inputField"
@@ -189,7 +197,7 @@ export default function Home() {
 					onChange={handleDesiredLoanChange}
 					placeholder="Desired loan amount"
 				/>
-				<button onClick={getLoan} disabled={loanIsConfirming || loanIsConfirmed || hasLoan} className="disabled:text-red-950">Get Loan</button>
+				<button onClick={getLoan} disabled={loanIsPending || loanIsConfirming || loanIsConfirmed || hasLoan} className="disabled:text-red-950">Get Loan</button>
 			</div>
 
 			{/* repayWithoutCollateralWithdrawal */}
@@ -197,16 +205,16 @@ export default function Home() {
 				<input
 					id="inputField"
 					type="text"
-					value={repayAmount}
-					onChange={handleRepayChange}
+					value={partialRepayAmount}
+					onChange={handlePartialRepayChange}
 					placeholder="Improve the health ratio"
 				/>
-				<button onClick={repayLoan}>Repay Loan</button>
+				<button onClick={partialRepay} disabled={partialRepayIsPending || partialRepayIsConfirmed || !hasLoan}>Repay Loan</button>
 			</div>
 
 			{/* repayFull */}
 			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
-				<button onClick={repayFull}>Fully repay the debts</button>
+				<button onClick={fullRepay} disabled={fullRepayIsPending || fullRepayIsConfirming || fullRepayIsConfirmed || !hasLoan}>Fully Repay the Debts</button>
 			</div>
 		</div>
 	)

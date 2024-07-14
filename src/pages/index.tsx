@@ -73,7 +73,7 @@ export default function Home() {
 
 	return (
 		<div className="h-screen container pt-6 px-6 flex flex-col gap-8">
-			<div className="px-6 py-4 bg-zinc-800 rounded-lg">
+			<div className="px-6 py-4 overflow-scroll bg-zinc-800 rounded-lg">
 				<ConnectKitButton/>
 
 				{account.isConnected && (<>
@@ -85,7 +85,7 @@ export default function Home() {
 						autoClose
 					/>
 
-					{!done && <button onClick={() => setOpen(true)}>{!hash && (isPending ? "Pending, please check your wallet..." : "Verify and Execute Transaction")}</button>}
+					{!done && <button onClick={() => setOpen(true)} className="px-4 py-2 my-3 bg-zinc-900 rounded-md">{!hash && (isPending ? "Pending, please check your wallet..." : "Verify and Execute Transaction")}</button>}
 
 					{hash && <p>Transaction Hash: {hash}</p>}
 					{isConfirming && <p>Waiting for confirmation...</p>} 

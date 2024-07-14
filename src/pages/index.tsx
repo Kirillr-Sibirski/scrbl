@@ -19,20 +19,20 @@ export default function Home() {
 	
 	/* --------------- Verification --------------- */
 	const { setOpen } = useIDKit()
-	const [done, setDone] = useState(false)
-	const { data: hash, isPending, error, writeContractAsync } = useWriteContract()
-	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, }) 
+	const [verified, setVerified] = useState(false)
+	const { data: verifyHash, isPending: verifyIsPending, error: verifyError, writeContractAsync: verifyWriteContractAsync } = useWriteContract()
+	const { isLoading: verifyIsConfirming, isSuccess: verifyIsConfirmed } = useWaitForTransactionReceipt({ hash: verifyHash, }) 
 	
-	const txVerifyWallet = async (proof: ISuccessResult) => {
+	const verifyWallet = async (proof: ISuccessResult) => {
 		try {
+			console.log("merkle_root", BigInt(proof!.merkle_root))
 			console.log("nullifier_hash", BigInt(proof!.nullifier_hash))
 			console.log("proof", decodeAbiParameters(
 				parseAbiParameters('uint256[8]'),
 				proof!.proof as `0x${string}`
 			)[0])
-			console.log("merkle_root", BigInt(proof!.merkle_root))
 
-			let a = await writeContractAsync({
+			let tx = await verifyWriteContractAsync({
 				address,
 				account: account.address!,
 				abi,
@@ -48,7 +48,7 @@ export default function Home() {
 				],
 			})
 
-			console.log("tx completed", a)
+			console.log("tx verifyWallet()", tx)
 			// setDone(true)
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
@@ -71,39 +71,42 @@ export default function Home() {
 			console.log("Estimate Loan:", data)
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
-	
-	// const estimateLoan = () => {
-	// 	console.log("Loan amount: ",estimateAmount);
-	// 	try {
-	// 		const output = useReadContract({
-	// 			address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-	// 			account: account.address!,
-	// 			abi,
-	// 			functionName: 'estimateLoan',
-	// 			args: [estimateAmount],
-	// 		});
-	// 		console.log("Transaction output: ", {output});
-	// 	} catch(err) {
-	// 		console.error(err);
-	// 	}
-	// }
 
 	/* ----------------- Get Loan ----------------- */
-	const [loanAmount, setLoanAmount] = useState(0)
-	const handleLoanChange = (event: any) => {
-		setLoanAmount(event.target.value)
+	const [hasLoan, setHasLoan] = useState(false)
+	const { data: loanHash, isPending: loanIsPending, error: loanError, writeContractAsync: loanWriteContractAsync } = useWriteContract()
+	const { isLoading: loanIsConfirming, isSuccess: loanIsConfirmed } = useWaitForTransactionReceipt({ hash: loanHash, }) 
+	
+	const [desiredLoanAmount, setDesiredLoanAmount] = useState(0)
+	const handleDesiredLoanChange = (event: any) => {
+		setDesiredLoanAmount(event.target.value)
 	};
+
+	// const getLoan = async (e: any) => {
+	// 	e.preventDefault()
+	// 	try {
+	// 		const data = await publicClient.readContract({
+	// 			address, abi,
+	// 			functionName: 'depositCollateralAndCreateEscrow',
+	// 			args: [account.address!, loanAmount],
+	// 		})
+
+	// 		console.log("Estimate Loan:", data)
+	// 	} catch (error) {console.log((error as BaseError).shortMessage)}
+	// }
 
 	const getLoan = async (e: any) => {
 		e.preventDefault()
-		try {
-			const data = await publicClient.readContract({
-				address, abi,
-				functionName: 'depositCollateralAndCreateEscrow',
-				args: [account.address!, loanAmount],
-			})
+		if (hasLoan) { return }
 
-			console.log("Estimate Loan:", data)
+		try {
+			let tx = await loanWriteContractAsync({
+				address, abi,
+				account: account.address!,
+				functionName: "depositCollateralAndCreateEscrow",
+				args: [desiredLoanAmount]
+			})
+			console.log("tx depositCollateralAndCreateEscrow():", tx)
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
 
@@ -118,16 +121,16 @@ export default function Home() {
 						app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
 						action={process.env.NEXT_PUBLIC_ACTION as string}
 						signal={account.address}
-						onSuccess={txVerifyWallet}
+						onSuccess={verifyWallet}
 						autoClose
 					/>
 
-					{!done && <button onClick={() => setOpen(true)} className="px-4 py-2 my-3 bg-zinc-900 rounded-md">{!hash && (isPending ? "Pending, please check your wallet..." : "Verify and Execute Transaction")}</button>}
+					{!verified && <button onClick={() => setOpen(true)} className="px-4 py-2 my-3 bg-zinc-900 rounded-md">{!verifyHash && (verifyIsPending ? "Pending, please check your wallet..." : "Verify and Execute Transaction")}</button>}
 
-					{hash && <p>Transaction Hash: {hash}</p>}
-					{isConfirming && <p>Waiting for confirmation...</p>} 
-					{isConfirmed && <p>Wallet verified confirmed.</p>}
-					{error && <p>Error: {(error as BaseError).message}</p>}
+					{verifyHash && <p>Transaction Hash: {verifyHash}</p>}
+					{verifyIsConfirming && <p>Waiting for confirmation...</p>} 
+					{verifyIsConfirmed && <p>Wallet verified confirmed.</p>}
+					{verifyError && <p>Error: {(verifyError as BaseError).message}</p>}
 				</>)}
 			</div>
 			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
@@ -145,11 +148,11 @@ export default function Home() {
 				<input
 					id="inputField"
 					type="text"
-					value={loanAmount}
-					onChange={handleLoanChange}
+					value={desiredLoanAmount}
+					onChange={handleDesiredLoanChange}
 					placeholder="Desired loan amount"
 				/>
-				<button onClick={getLoan}>Get Loan</button>
+				<button onClick={getLoan} disabled={loanIsConfirming || loanIsConfirmed || hasLoan} className="disabled:text-red-950">Get Loan</button>
 			</div>
 		</div>
 	)

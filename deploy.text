@@ -1,1 +1,3 @@
-forge create src/Manager.sol:Manager --rpc-url https://eth-sepolia.g.alchemy.com/v2/$NEXT_PUBLIC_ALCHEMY_API_KEY --private-key $PRIVATE_KEY --constructor-args $NEXT_PUBLIC_WORLD_ID_ROUTER $NEXT_PUBLIC_APP_ID $NEXT_PUBLIC_ACTION
+forge create src/Manager.sol:Manager --rpc-url https://base-sepolia.g.alchemy.com/v2/$NEXT_PUBLIC_ALCHEMY_API_KEY \
+     --private-key $PRIVATE_KEY \
+     --constructor-args $NEXT_PUBLIC_WORLD_ID_ROUTER $NEXT_PUBLIC_APP_ID $NEXT_PUBLIC_ACTION $NEXT_PUBLIC_PYTH_ROUTER

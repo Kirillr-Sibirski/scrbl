@@ -13,6 +13,7 @@ export default function Home() {
 	const [done, setDone] = useState(false)
 	const { data: hash, isPending, error, writeContractAsync } = useWriteContract()
 	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, }) 
+	const [loanAmount, setLoanAmount] = useState(0);
 
 	const submitTx = async (proof: ISuccessResult) => {
 		try {
@@ -52,6 +53,24 @@ export default function Home() {
 		} catch (error) {console.log((error as BaseError).shortMessage)}
 	}
 
+	const estimateLoan = async () => {
+		console.log("Loan amount: ",loanAmount);
+		let a = await writeContractAsync({
+			address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+			account: account.address!,
+			abi,
+			functionName: 'estimateLoan',
+			args: [
+				loanAmount
+			]
+		});
+		console.log("Transaction output: ",a);
+	}
+
+	const handleChange = (event: any) => {
+		setLoanAmount(event.target.value); // Update state with the current input value
+	};
+
 	return (
 		<div>
 			<ConnectKitButton/>
@@ -69,9 +88,20 @@ export default function Home() {
 
 				{hash && <p>Transaction Hash: {hash}</p>}
 				{isConfirming && <p>Waiting for confirmation...</p>} 
-				{isConfirmed && <p>Transaction confirmed.</p>}
+				{isConfirmed && <p>Wallet verified confirmed.</p>}
 				{error && <p>Error: {(error as BaseError).message}</p>}
 			</>)}
+			<div>
+				<input
+					id="inputField"
+					type="text"
+					value={loanAmount}
+					onChange={handleChange}
+					placeholder="Desired loan amount"
+				/>
+				<button onClick={estimateLoan}>Estimate Loan</button>
+				{/* {estimatedDetails && <p>{estimatedDetails}</p>} */}
+			</div>
 		</div>
 	)
 }

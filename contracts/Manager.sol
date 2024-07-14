@@ -4,12 +4,14 @@ pragma solidity >=0.8.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "pyth-sdk-solidity/IPyth.sol";
 import "pyth-sdk-solidity/PythStructs.sol";
-import { Multicall3 } from "multicall/Multicall3.sol";
 import { ByteHasher } from './helpers/ByteHasher.sol';
 import { IWorldID } from './interfaces/IWorldID.sol';
 import { IEscrowWallet } from './interfaces/IEscrowWallet.sol';
 import { EscrowWallet } from './EscrowWallet.sol';
 import { EscrowFacade } from './EscrowFacade.sol';
+import { IMulticall3, Call3, Result } from './interfaces/IMulticall3.sol';
+
+
 
 contract Manager {
 	using ByteHasher for bytes;
@@ -280,22 +282,23 @@ contract Manager {
 	// }
 
 	/// @notice multicall calls should close out all compound positions and swap everything to usdc including collateral
-	function liquidateLoan(Multicall3.Call3[] calldata calls, address escrowWalletToBeLiquidated) external {
+	function liquidateLoan(Call3[] calldata calls, address escrowWalletToBeLiquidated) external {
 		// (bool liquidate, ) = checkLiquidate(checkData);
 		// if(!liquidate) revert("The loan can't be liquidated.");
 		// Uniswap liquidation event here, swap collateral ETH for USDC
 		// address debtor;
     	// (debtor) = abi.decode(checkData, (address));
 		address debtor = s_loan_to_debtor[escrowWalletToBeLiquidated];
-		Loan loan = s_loans[debtor];
-		Multicall3.aggregate3(calls);
-		uint256 liquidationThreshold = loan.loanAmount / 10000;
+		Loan memory loan = s_loans[debtor];
+		IMulticall3 multicall = IMulticall3(0xcA11bde05977b3631167028862bE2a173976CA11);
+		multicall.aggregate3(calls);
+		uint256 liquidationThreshold = loan.debtAmount / 10000;
 		if(usdcToken.balanceOf(loan.escrowWallet) > (loan.debtAmount + liquidationThreshold)) revert("this escrow wallet still has enough usdc to stay above liquidation");
 		int16 creditScore = s_creditScore[debtor];
 		s_creditScore[debtor] = creditScore-SCORE_STEP; // Decrease credit score
-		EscrowWallet escrow = IEscrowWallet(loan.escrowWallet);
-		uint256 liquidationReward = loan.loanAmount * 200 / 10000;
-		uint256 totalToPayBackToProtocol = loan.loanAmount - liquidationReward;
+		IEscrowWallet escrow = IEscrowWallet(loan.escrowWallet);
+		uint256 liquidationReward = loan.debtAmount * 200 / 10000;
+		uint256 totalToPayBackToProtocol = loan.debtAmount - liquidationReward;
 		escrow.safeTransfer(usdcTokenAddress, address(this), totalToPayBackToProtocol);
 		escrow.safeTransfer(usdcTokenAddress, msg.sender, liquidationReward);
 		emit Liquidation(debtor);

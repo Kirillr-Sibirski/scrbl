@@ -17,12 +17,17 @@ export default function Home() {
 	const submitTx = async (proof: ISuccessResult) => {
 		try {
 			console.log("nullifier_hash", BigInt(proof!.nullifier_hash))
+			console.log("proof", decodeAbiParameters(
+				parseAbiParameters('uint256[8]'),
+				proof!.proof as `0x${string}`
+			)[0])
+			console.log("merkle_root", BigInt(proof!.merkle_root))
 
 			let a = await writeContractAsync({
 				address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
 				account: account.address!,
 				abi,
-				functionName: 'verifyAndExecute',
+				functionName: 'verifyWallet',
 				args: [
 					account.address!,
 					BigInt(proof!.merkle_root),
@@ -33,6 +38,14 @@ export default function Home() {
 					)[0],
 				],
 			})
+
+			// let a = await writeContractAsync({
+			// 	address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+			// 	account: account.address!,
+			// 	abi,
+			// 	functionName: 'getShit',
+			// 	args: []
+			// })
 
 			console.log("tx completed", a)
 			// setDone(true)

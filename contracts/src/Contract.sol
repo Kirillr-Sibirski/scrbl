@@ -45,7 +45,7 @@ contract Contract {
 	/// @dev Feel free to rename this method however you want! We've used `claim`, `verify` or `execute` in the past.
 	function verifyAndExecute(address signal, uint256 root, uint256 nullifierHash, uint256[8] calldata proof) public {
 		// First, we make sure this person hasn't done this before
-		if (nullifierHashes[nullifierHash]) revert DuplicateNullifier(nullifierHash);
+		// if (nullifierHashes[nullifierHash]) revert DuplicateNullifier(nullifierHash);
 
 		// We now verify the provided proof is valid and the user is verified by World ID
 		worldId.verifyProof(

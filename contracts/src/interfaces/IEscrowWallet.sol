@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.12;
 
 interface IEscrowWallet {
-    function factory() external view returns (address);
-
     function escrowManager() external view returns (address);
 
     function safeTransfer(address token, address to, uint256 amount) external;

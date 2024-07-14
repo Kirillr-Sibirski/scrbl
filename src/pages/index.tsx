@@ -16,13 +16,13 @@ import abi from '@/abi/ContractAbi.json'
 export default function Home() {
 	const address = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`
 	const account = useAccount()
-	
+
 	/* --------------- Verification --------------- */
 	const { setOpen } = useIDKit()
 	const [done, setDone] = useState(false)
 	const { data: hash, isPending, error, writeContractAsync } = useWriteContract()
-	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, }) 
-	
+	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash, })
+
 	const txVerifyWallet = async (proof: ISuccessResult) => {
 		try {
 			console.log("nullifier_hash", BigInt(proof!.nullifier_hash))
@@ -50,7 +50,7 @@ export default function Home() {
 
 			console.log("tx completed", a)
 			// setDone(true)
-		} catch (error) {console.log((error as BaseError).shortMessage)}
+		} catch (error) { console.log((error as BaseError).shortMessage) }
 	}
 
 	/* --------------- Estimate Loan -------------- */
@@ -58,7 +58,7 @@ export default function Home() {
 	const handleEstimateChange = (event: any) => {
 		setEstimateAmount(event.target.value) // Update state with the current input value
 	};
-	
+
 	const estimateLoan = async (e: any) => {
 		e.preventDefault()
 		try {
@@ -69,9 +69,9 @@ export default function Home() {
 			})
 
 			console.log("Estimate Loan:", data)
-		} catch (error) {console.log((error as BaseError).shortMessage)}
+		} catch (error) { console.log((error as BaseError).shortMessage) }
 	}
-	
+
 	// const estimateLoan = () => {
 	// 	console.log("Loan amount: ",estimateAmount);
 	// 	try {
@@ -104,7 +104,7 @@ export default function Home() {
 			})
 
 			console.log("Get Loan:", data)
-		} catch (error) {console.log((error as BaseError).shortMessage)}
+		} catch (error) { console.log((error as BaseError).shortMessage) }
 	}
 
 	/* ----------------- Repay Loan ----------------- */
@@ -127,14 +127,28 @@ export default function Home() {
 			})
 
 			console.log("Repay Loan:", a)
-		} catch (error) {console.log((error as BaseError).shortMessage)}
+		} catch (error) { console.log((error as BaseError).shortMessage) }
+	}
+
+	/* ----------------- Full Loan Repay ----------------- */
+	const repayFull = async (e: any) => {
+		e.preventDefault()
+		try {
+			let a = await writeContractAsync({
+				address,
+				account: account.address!,
+				abi,
+				functionName: 'repayFull',
+			})
+			console.log("Full loan repay:", a)
+		} catch (error) { console.log((error as BaseError).shortMessage) }
 	}
 
 	/* ---------------- Components ---------------- */
 	return (
 		<div className="h-screen container pt-6 px-6 flex flex-col gap-8">
 			<div className="px-6 py-4 overflow-scroll bg-zinc-800 rounded-lg">
-				<ConnectKitButton/>
+				<ConnectKitButton />
 
 				{account.isConnected && (<>
 					<IDKitWidget
@@ -148,7 +162,7 @@ export default function Home() {
 					{!done && <button onClick={() => setOpen(true)} className="px-4 py-2 my-3 bg-zinc-900 rounded-md">{!hash && (isPending ? "Pending, please check your wallet..." : "Verify and Execute Transaction")}</button>}
 
 					{hash && <p>Transaction Hash: {hash}</p>}
-					{isConfirming && <p>Waiting for confirmation...</p>} 
+					{isConfirming && <p>Waiting for confirmation...</p>}
 					{isConfirmed && <p>Wallet verified confirmed.</p>}
 					{error && <p>Error: {(error as BaseError).message}</p>}
 				</>)}
@@ -185,6 +199,11 @@ export default function Home() {
 					placeholder="Improve the health ratio"
 				/>
 				<button onClick={repayLoan}>Repay Loan</button>
+			</div>
+
+			{/* repayFull */}
+			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
+				<button onClick={repayFull}>Fully repay the debts</button>
 			</div>
 		</div>
 	)

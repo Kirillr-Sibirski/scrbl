@@ -72,26 +72,28 @@ export default function Home() {
 	};
 
 	return (
-		<div>
-			<ConnectKitButton/>
+		<div className="h-screen container pt-6 px-6 flex flex-col gap-8">
+			<div className="px-6 py-4 bg-zinc-800 rounded-lg">
+				<ConnectKitButton/>
 
-			{account.isConnected && (<>
-				<IDKitWidget
-					app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
-					action={process.env.NEXT_PUBLIC_ACTION as string}
-					signal={account.address}
-					onSuccess={submitTx}
-					autoClose
-				/>
+				{account.isConnected && (<>
+					<IDKitWidget
+						app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
+						action={process.env.NEXT_PUBLIC_ACTION as string}
+						signal={account.address}
+						onSuccess={submitTx}
+						autoClose
+					/>
 
-				{!done && <button onClick={() => setOpen(true)}>{!hash && (isPending ? "Pending, please check your wallet..." : "Verify and Execute Transaction")}</button>}
+					{!done && <button onClick={() => setOpen(true)}>{!hash && (isPending ? "Pending, please check your wallet..." : "Verify and Execute Transaction")}</button>}
 
-				{hash && <p>Transaction Hash: {hash}</p>}
-				{isConfirming && <p>Waiting for confirmation...</p>} 
-				{isConfirmed && <p>Wallet verified confirmed.</p>}
-				{error && <p>Error: {(error as BaseError).message}</p>}
-			</>)}
-			<div>
+					{hash && <p>Transaction Hash: {hash}</p>}
+					{isConfirming && <p>Waiting for confirmation...</p>} 
+					{isConfirmed && <p>Wallet verified confirmed.</p>}
+					{error && <p>Error: {(error as BaseError).message}</p>}
+				</>)}
+			</div>
+			<div className="px-6 py-4 flex flex-col items-start bg-zinc-800 rounded-lg">
 				<input
 					id="inputField"
 					type="text"

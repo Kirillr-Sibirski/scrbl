@@ -2,6 +2,7 @@
 pragma solidity >=0.8.12;
 pragma abicoder v2;
 
+import { ISwapRouter02 } from "swap-router-contracts/interfaces/ISwapRouter02.sol";
 import { ISwapRouter } from "v3-periphery/interfaces/ISwapRouter.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "solidity-utils/libraries/SafeERC20.sol";
@@ -27,7 +28,7 @@ contract EscrowFacade {
 
     Manager public immutable escrowManager;
     address public immutable swapRouterAddr = 0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4; //Base sepolia SwapRouter02 contract address 
-    ISwapRouter public immutable swapRouter = ISwapRouter(swapRouterAddr);
+    ISwapRouter02 public immutable swapRouter = ISwapRouter02(swapRouterAddr);
 
     address public constant WETH = 0xf531B8F309Be94191af87605CfBf600D71C2cFe0; //base sepolia address
     address public constant USDC = 0x5dEaC602762362FE5f135FA5904351916053cF70; //base sepolia address

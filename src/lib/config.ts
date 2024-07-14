@@ -16,7 +16,7 @@ import { getDefaultConfig } from 'connectkit';
 // 	testnet: true,
 // };
 
-console.log(process.env.NEXT_PUBLIC_ALCHEMY_API_KEY)
+// console.log(process.env.NEXT_PUBLIC_ALCHEMY_API_KEY)
 
 export const config = createConfig(
     getDefaultConfig({

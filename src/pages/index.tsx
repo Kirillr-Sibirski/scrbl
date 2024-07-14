@@ -3,7 +3,7 @@
 // Web3
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, type BaseError } from 'wagmi'
 import { IDKitWidget, ISuccessResult, useIDKit } from '@worldcoin/idkit'
-import { decodeAbiParameters, parseAbiParameters } from 'viem'
+import { decodeAbiParameters, parseAbiParameters, parseEther, stringify } from 'viem'
 import { ConnectKitButton } from 'connectkit'
 // Next.js
 import { useState } from 'react'
@@ -91,13 +91,23 @@ export default function Home() {
 		if (hasLoan) { return }
 
 		try {
+			const data: any = await publicClient.readContract({
+				address, abi,
+				functionName: 'estimateLoan',
+				args: [account.address!, desiredLoanAmount],
+			})
+
 			let tx = await loanWriteContractAsync({
 				address, abi,
+				value: data[0],
 				account: account.address!,
 				functionName: "depositCollateralAndCreateEscrow",
 				args: [desiredLoanAmount]
 			})
+
 			console.log("tx# depositCollateralAndCreateEscrow():", tx)
+
+			setHasLoan(true)
 		} catch (loanError) { console.log((loanError as BaseError).shortMessage) }
 	}
 
@@ -112,7 +122,7 @@ export default function Home() {
 
 	const partialRepay = async (e: any) => {
 		e.preventDefault()
-		if (!hasLoan) { return }
+		// if (!hasLoan) { return }
 
 		try {
 			let tx = await partialRepayWriteContractAsync({
@@ -135,7 +145,7 @@ export default function Home() {
 
 	const fullRepay = async (e: any) => {
 		e.preventDefault()
-		if (!hasLoan) { return }
+		// if (!hasLoan) { return }
 		
 		try {
 			let tx = await fullRepayWriteContractAsync({
@@ -209,12 +219,12 @@ export default function Home() {
 					onChange={handlePartialRepayChange}
 					placeholder="Improve the health ratio"
 				/>
-				<button onClick={partialRepay} disabled={partialRepayIsPending || partialRepayIsConfirmed || !hasLoan}>Repay Loan</button>
+				<button onClick={partialRepay} disabled={partialRepayIsPending || partialRepayIsConfirmed}>Repay Loan</button>
 			</div>
 
 			{/* repayFull */}
 			<div className="px-6 py-4 flex flex-col items-start gap-2 bg-zinc-800 rounded-lg">
-				<button onClick={fullRepay} disabled={fullRepayIsPending || fullRepayIsConfirming || fullRepayIsConfirmed || !hasLoan}>Fully Repay the Debts</button>
+				<button onClick={fullRepay} disabled={fullRepayIsPending || fullRepayIsConfirming || fullRepayIsConfirmed}>Fully Repay the Debts</button>
 			</div>
 		</div>
 	)

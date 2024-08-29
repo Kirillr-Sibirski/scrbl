@@ -1,6 +1,6 @@
 # Semi-Collateralized Reputation Based Lending
 
-SCRBL is an overcollateralized lending platform backed by WorldID to secure on-chain credit scores. 
+SCRBL is an undercollateralized lending platform backed by WorldID to secure on-chain credit scores. 
 It addresses a key issue in crypto adoption by eliminating the need for overcollateralized positions, mirroring the functionality of traditional lending practices.
 The primary use case for this project is margin trading, enabling any type of leverage on any protocol, provided the protocol is whitelisted within the escrow wallet.
 
